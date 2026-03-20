@@ -1,18 +1,20 @@
 # 🎓 Faculty Selection Portal
 
-A production-ready full-stack faculty selection portal built with **React + Firebase**.
+A production-ready full-stack faculty selection portal built with React + Firebase Firestore + Express (Render).
+
+---
 
 ## ✨ Features
 
 - **Student Login** — PIN + DOB (DD/MM/YYYY) authentication
-- **Real-time Seat Counts** — Firestore `onSnapshot` listeners
+- **Real-time Seat Counts** — Firestore onSnapshot listeners
 - **Countdown Timer** — Synced from Firestore `settings/config`
-- **Accordion UI** — Subject-by-subject faculty selection with dropdowns
+- **Accordion UI** — Subject-by-subject faculty selection
 - **One-time Submission** — Firestore transaction prevents duplicates & overbooking
-- **Admin Dashboard** — Tabbed: Stats / Subjects / Faculty / Settings
-- **Excel Import** — Bulk upload students from `.xlsx` file
-- **CSV Export** — Download all selections
-- **Concurrency Safe** — Firebase transactions handle race conditions
+- **Admin Dashboard** — Stats / Subjects / Faculty / Students / Settings tabs
+- **Excel Import** — Bulk upload students from `.xlsx` (Name, PIN, DOB)
+- **CSV Export** — Selections, Subjects, Faculty, Students
+- **Concurrency Safe** — Firestore transactions handle race conditions
 
 ---
 
@@ -20,138 +22,144 @@ A production-ready full-stack faculty selection portal built with **React + Fire
 
 ```
 faculty-portal/
-├── frontend/              # React app
+├── frontend/                  # React app (deploy to Vercel)
 │   └── src/
 │       ├── components/
-│       │   ├── shared/    # Navbar, Timer, Modal
-│       │   └── student/   # SubjectAccordionList
 │       ├── pages/
-│       │   ├── student/   # Login, Dashboard
-│       │   └── admin/     # Login, Dashboard
-│       ├── services/      # firebase.js, api.js
-│       ├── context/       # AuthContext
-│       ├── hooks/         # useCountdown
-│       └── App.js
-├── functions/             # Firebase Cloud Functions
-│   ├── controllers/       # Auth, Selection, Admin, Export
-│   ├── middlewares/       # JWT verification
-│   └── index.js
-├── firestore.rules        # Security rules
-├── firestore.indexes.json # Query indexes
-└── firebase.json          # Firebase config
+│       ├── services/          # firebase.js, api.js
+│       ├── context/           # AuthContext
+│       └── hooks/             # useCountdown, useRealtimeData
+├── functions/                 # Firebase Cloud Functions (local emulator only)
+├── faculty-portal-server/     # Standalone Express API (deploy to Render)
+│   ├── controllers/
+│   ├── middlewares/
+│   └── server.js
+├── firestore.rules
+├── firestore.indexes.json
+└── firebase.json
 ```
 
 ---
 
-## 🚀 Setup & Deployment
+## 🚀 Local Development (Emulator)
 
 ### Prerequisites
 - Node.js 18+
 - Firebase CLI: `npm install -g firebase-tools`
-- A Firebase project with **Firestore** and **Functions** enabled
+- Java 21+ (for Firestore emulator)
 
----
-
-### 1. Clone & Install
-
-```bash
-# Install frontend dependencies
-cd frontend && npm install
-
-# Install functions dependencies
-cd ../functions && npm install
-```
-
----
-
-### 2. Firebase Setup
-
-```bash
-# Login to Firebase
-firebase login
-
-# Initialize project (select your project)
-firebase use --add
-```
-
----
-
-### 3. Configure Frontend
-
-```bash
+### Install dependencies
+```powershell
 cd frontend
-cp .env.example .env
-# Edit .env with your Firebase project values from:
-# Firebase Console → Project Settings → Your Apps → SDK config
+npm install
+
+cd ..\functions
+npm install
 ```
 
----
-
-### 4. Configure Functions
-
-Change admin credentials in `functions/controllers/adminAuthController.js`:
-```js
-const ADMIN_USERNAME = "admin";          // ← change this
-const ADMIN_PASSWORD = "FacultyPortal@2024"; // ← change this
+### Configure environment
+Create `functions/.env`:
+```env
+JWT_SECRET=your_strong_random_secret
+ADMIN_USER=your_admin_username
+ADMIN_PASS=your_strong_password
 ```
 
-Set JWT secret for production:
-```bash
-firebase functions:config:set jwt.secret="your_super_secret_key"
+Create `frontend/.env`:
+```env
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your-project-id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
+REACT_APP_FIREBASE_APP_ID=...
+REACT_APP_API_URL=http://127.0.0.1:5001/your-project-id/us-central1/api
+REACT_APP_USE_EMULATOR=true
 ```
 
-Then update `functions/controllers/authController.js` and `adminAuthController.js`:
-```js
-process.env.JWT_SECRET // already reads from env
+### Start emulators
+```powershell
+# Set Java PATH (Windows)
+$env:PATH = $env:PATH + ";C:\Users\<you>\AppData\Local\Programs\Eclipse Adoptium\jdk-21...\bin"
+
+firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data
 ```
 
----
-
-### 5. Run Locally (Emulators)
-
-```bash
-# Terminal 1 — Start emulators
-firebase emulators:start
-
-# Terminal 2 — Start frontend
+### Start frontend (second terminal)
+```powershell
 cd frontend
-REACT_APP_API_URL=http://localhost:5001/YOUR_PROJECT_ID/us-central1/api npm start
+npm start
 ```
 
 ---
 
-### 6. Deploy to Production
+## ☁️ Production Deployment
 
-```bash
-# Build frontend
-cd frontend && npm run build
+### Architecture
+| Service | Platform | Cost |
+|---|---|---|
+| Frontend | Vercel | Free |
+| Backend API | Render | Free |
+| Firestore Database | Firebase Spark | Free |
 
-# Deploy everything
-cd .. && firebase deploy
+### Step 1 — Deploy Firestore rules
+```powershell
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+### Step 2 — Deploy Backend to Render
+1. Push `faculty-portal-server/` folder to a GitHub repo
+2. Go to [render.com](https://render.com) → New Web Service → connect repo
+3. Build command: `npm install`
+4. Start command: `node server.js`
+5. Add environment variables:
+
+| Key | Value |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | Contents of Firebase service account JSON (one line) |
+| `JWT_SECRET` | Strong random secret (min 32 chars) |
+| `ADMIN_USER` | Your admin username |
+| `ADMIN_PASS` | Your admin password |
+
+### Step 3 — Deploy Frontend to Vercel
+Update `frontend/.env` for production:
+```env
+REACT_APP_API_URL=https://your-render-app.onrender.com
+REACT_APP_USE_EMULATOR=false
+```
+
+```powershell
+cd frontend
+npm run build
+npx vercel --prod
 ```
 
 ---
 
-## 🔐 Admin Login
+## 🔐 Security
 
-- **URL:** `/admin/login`
-- **Username:** `admin`
-- **Password:** `FacultyPortal@2024`
-- ⚠️ Change these in `adminAuthController.js` before deploying!
+- ✅ Admin credentials stored in **environment variables only** — never in code
+- ✅ JWT secret stored in **environment variables only**
+- ✅ All submissions go through backend API — no direct Firestore writes from client
+- ✅ Firestore transactions prevent race conditions
+- ✅ Server-side timestamps — client time never trusted
+- ✅ `.env` files excluded from git via `.gitignore`
+- ✅ Admin token: 24h expiry, student token: 8h expiry
 
 ---
 
 ## 📋 Excel Import Format
 
-Your `.xlsx` file must have these column headers (case-insensitive):
+Columns (any order, case-insensitive):
 
-| PIN        | DOB        |
-|------------|------------|
-| 23091A05R4 | 15/08/2003 |
-| 22091A05B2 | 22/11/2002 |
+| Name | PIN | DOB |
+|---|---|---|
+| student1 | 23091A05XX | 0X/0X/20XX |
+| student2 | 23091A05XX | 0X/0X/20XX |
 
-- **PIN format:** `YYCCCSRR` → Year(2) + College(3) + Branch(3) + Roll(variable)
+- **PIN format:** `YYCCCSRR` → Year(2) + College(3) + Branch(3) + Roll
 - **DOB format:** `DD/MM/YYYY`
+- Name column is optional
 
 ---
 
@@ -159,22 +167,11 @@ Your `.xlsx` file must have these column headers (case-insensitive):
 
 | Collection | Doc ID | Key Fields |
 |---|---|---|
-| `students` | PIN | pin, dob, branch, year, has_submitted |
+| `students` | PIN | pin, dob, name, branch, year, has_submitted |
 | `subjects` | auto | name, code |
-| `faculty` | auto | name, subject_id, max_limit, current_count |
+| `faculty` | auto | name, subject_id, max_limit, current_count, experience |
 | `selections` | auto | pin, subject_id, faculty_id, timestamp |
-| `settings` | `config` | selection_open, end_time |
-
----
-
-## 🔒 Security
-
-- All student submissions go through **Cloud Functions only**
-- Client cannot directly write to `selections`, `faculty`, or `students`
-- **Firestore transactions** prevent race conditions and overbooking
-- **Server-side timestamps** — never trust client time
-- **JWT tokens** expire after 8 hours
-- Admin credentials stored **only in backend**, never exposed to frontend
+| `settings` | config | selection_open, end_time |
 
 ---
 
@@ -195,7 +192,7 @@ Your `.xlsx` file must have these column headers (case-insensitive):
 
 ## 📱 Responsive Design
 
-- Mobile-first, tested on 320px–1440px
-- Clean professional UI with DM Sans + Sora fonts
-- Smooth Framer Motion animations
-- Color-coded seat availability (Green/Yellow/Red)
+- Mobile + Desktop responsive
+- Clean professional UI — DM Sans + Sora fonts
+- Framer Motion animations
+- Color-coded seat availability (Green / Yellow / Red)
