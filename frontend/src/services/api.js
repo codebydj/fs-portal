@@ -15,7 +15,13 @@ async function request(path, options = {}) {
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   const data = await res.json();
-  if (!res.ok) throw { ...data, status: res.status };
+  if (!res.ok) {
+    const err = new Error(data.error || "Request failed");
+    err.code = data.code;
+    err.status = res.status;
+    Object.assign(err, data);
+    throw err;
+  }
   return data;
 }
 

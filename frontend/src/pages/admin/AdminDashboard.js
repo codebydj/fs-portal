@@ -514,7 +514,7 @@ function FacultyTab({ stats, onRefresh }) {
         <form onSubmit={handleAdd} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="col-span-2 sm:col-span-1"><label className="label">Faculty Name</label><input className="input-field" placeholder="e.g. Dr. Reddy" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} /></div>
           <div><label className="label">Subject</label><select className="input-field" value={form.subject_id} onChange={(e) => setForm(p => ({ ...p, subject_id: e.target.value }))}><option value="">Select subject</option>{stats?.subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-          <div><label className="label">Max Seats</label><input type="number" min="1" className="input-field" placeholder="e.g. 30" value={form.max_limit} onChange={(e) => setForm(p => ({ ...p, max_limit: e.target.value }))} /></div>
+          <div><label className="label">Max Seats</label><input type="number" min="1" className="input-field" placeholder="30" value={form.max_limit} onChange={(e) => setForm(p => ({ ...p, max_limit: e.target.value }))} /></div>
           <div><label className="label">Experience (yrs) <span className="text-slate-400 font-normal">optional</span></label><input type="number" min="0" className="input-field" placeholder="e.g. 5" value={form.experience} onChange={(e) => setForm(p => ({ ...p, experience: e.target.value }))} /></div>
           <div className="flex items-end"><button type="submit" className="btn-primary w-full" disabled={loading}>{loading ? "Adding..." : "+ Add Faculty"}</button></div>
         </form>
@@ -939,18 +939,6 @@ function SettingsTab({ stats, onRefresh, realtimeEndTime, realtimeSelectionOpen 
     }
   };
 
-  // Convert datetime-local string to ISO string preserving local timezone
-  const localDatetimeToISO = (val) => {
-    if (!val) return null;
-    // "2026-03-20T04:15" → treat as local time → get ISO with offset
-    const local = new Date(val);
-    // Offset in minutes, e.g. IST = -330 (UTC+5:30)
-    const offsetMs = local.getTimezoneOffset() * 60 * 1000;
-    // Build a UTC date that represents this local time correctly
-    const utcDate = new Date(local.getTime() - offsetMs);
-    return local.toISOString(); // JS Date always gives UTC ISO, but new Date(val) already parsed as local
-  };
-
   const handleToggle = async () => {
     if (endTimeError) return toast.error("Fix the end time error first");
     if (endTime) {
@@ -1084,7 +1072,7 @@ function SettingsTab({ stats, onRefresh, realtimeEndTime, realtimeSelectionOpen 
 
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 font-display mb-1">Import Students</h3>
-        <p className="text-sm text-slate-500 mb-4">Upload an Excel (.xlsx) file with Name , PIN and DOB columns.</p>
+        <p className="text-sm text-slate-500 mb-4">Upload an Excel (.xlsx) file with PIN and DOB columns.</p>
         <label className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
           {importing ? "Importing..." : "Upload Excel File"}
