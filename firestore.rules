@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Students: can only read their own doc, no writes from client
+    match /students/{pin} {
+      allow read: if request.auth == null && resource.data.pin == pin;
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // Subjects: anyone can read (for real-time listeners in frontend)
+    match /subjects/{id} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // Faculty: anyone can read (real-time seat counts)
+    match /faculty/{id} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // Selections: no client access at all
+    match /selections/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // Settings: anyone can read (for countdown timer & selection open state)
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions
+    }
+  }
+}

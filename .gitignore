@@ -1,0 +1,23 @@
+# ── Secrets — NEVER commit these ──────────────────────────────
+.env
+functions/.env
+frontend/.env
+*.env.local
+
+# ── Emulator data — local only ────────────────────────────────
+emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+functions/node_modules/
+frontend/node_modules/
+
+# ── Build output ──────────────────────────────────────────────
+frontend/build/
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
