@@ -1,15 +1,15 @@
 const admin = require("firebase-admin");
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 require("dotenv").config();
 
-// ── Firebase Admin init with service account from env ─────────
+// ── Firebase Admin init ───────────────────────────────────────
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -30,12 +30,16 @@ app.use(cors({
   credentials: true,
 }));
 
+// ── File upload BEFORE express.json ──────────────────────────
+const { importStudents } = require("./controllers/importController");
+const { verifyAdmin } = require("./middlewares/adminAuth");
+app.post("/admin/import-students", verifyAdmin, upload.single("file"), importStudents);
+
+// ── JSON body parsing for all other routes ────────────────────
 app.use(express.json());
 
-// ── Health check ──────────────────────────────────────────────
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-// ── Routes ────────────────────────────────────────────────────
 const { studentLogin } = require("./controllers/authController");
 const { adminLogin } = require("./controllers/adminAuthController");
 const { submitSelection } = require("./controllers/selectionController");
@@ -46,50 +50,32 @@ const {
   resetAllSubjects, resetAllFaculty, resetStudents,
   getStats, getStudents, deleteStudent, getFacultyStudents,
 } = require("./controllers/adminController");
-const { importStudents } = require("./controllers/importController");
 const { exportCSV, exportSubjectsCSV, exportFacultyCSV, exportStudentsCSV } = require("./controllers/exportController");
-const { verifyAdmin } = require("./middlewares/adminAuth");
 const { verifyStudent } = require("./middlewares/studentAuth");
 
-// Auth
 app.post("/auth/student/login", studentLogin);
 app.post("/auth/admin/login", adminLogin);
-
-// Student
 app.post("/selection/submit", verifyStudent, submitSelection);
 
-// Admin — Subjects
 app.get("/admin/stats", verifyAdmin, getStats);
 app.post("/admin/subjects", verifyAdmin, addSubject);
 app.put("/admin/subjects/:id", verifyAdmin, editSubject);
 app.delete("/admin/subjects/:id", verifyAdmin, deleteSubject);
-
-// Admin — Faculty
 app.post("/admin/faculty", verifyAdmin, addFaculty);
 app.put("/admin/faculty/:id", verifyAdmin, editFaculty);
 app.delete("/admin/faculty/:id", verifyAdmin, deleteFaculty);
 app.get("/admin/faculty/:facultyId/students", verifyAdmin, getFacultyStudents);
-
-// Admin — Settings & Resets
 app.post("/admin/toggle-selection", verifyAdmin, toggleSelection);
 app.post("/admin/reset-selections", verifyAdmin, resetSelections);
 app.post("/admin/reset-subjects", verifyAdmin, resetAllSubjects);
 app.post("/admin/reset-faculty", verifyAdmin, resetAllFaculty);
 app.post("/admin/reset-students", verifyAdmin, resetStudents);
-
-// Admin — Students
 app.get("/admin/students", verifyAdmin, getStudents);
 app.delete("/admin/students/:pin", verifyAdmin, deleteStudent);
-
-// Admin — Import & Export
-app.post("/admin/import-students", verifyAdmin, importStudents);
 app.get("/admin/export-csv", verifyAdmin, exportCSV);
 app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
 app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
 
-// ── Start server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`✅ Faculty Portal API running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Faculty Portal API running on port ${PORT}`));

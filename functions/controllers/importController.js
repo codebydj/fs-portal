@@ -2,35 +2,14 @@ const admin = require("firebase-admin");
 const db = admin.firestore();
 
 function parseDob(raw) {
-  if (raw === null || raw === undefined || raw === "") return null;
-
-  // Case 1: Already a JS Date object (XLSX parsed it automatically)
-  if (raw instanceof Date) {
-    if (isNaN(raw.getTime())) return null;
-    // Use UTC to avoid timezone shift
-    const d = String(raw.getUTCDate()).padStart(2, "0");
-    const m = String(raw.getUTCMonth() + 1).padStart(2, "0");
-    const y = raw.getUTCFullYear();
-    if (y < 1950 || y > 2100) return null;
-    return `${d}/${m}/${y}`;
-  }
-
+  if (!raw && raw !== 0) return null;
   const str = String(raw).trim();
-  if (!str) return null;
-
-  // Case 2: Already DD/MM/YYYY
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
-
-  // Case 3: DD-MM-YYYY
   if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str.replace(/-/g, "/");
-
-  // Case 4: YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     const [y, m, d] = str.split("-");
     return `${d}/${m}/${y}`;
   }
-
-  // Case 5: Excel serial number (e.g. 37622)
   if (/^\d+(\.\d+)?$/.test(str)) {
     const serial = Math.floor(Number(str));
     if (serial > 0 && serial < 100000) {
@@ -43,177 +22,131 @@ function parseDob(raw) {
       } catch (_) {}
     }
   }
-
-  // Case 6: "15-Aug-2003" or "15 Aug 2003" or "Aug 15, 2003" or any locale string
-  // Parse via Date but force UTC interpretation to avoid timezone shifts
   try {
-    const parsed = new Date(str);
-    if (!isNaN(parsed.getTime())) {
-      // Use UTC values to prevent off-by-one from IST offset
-      const d = String(parsed.getUTCDate()).padStart(2, "0");
-      const m = String(parsed.getUTCMonth() + 1).padStart(2, "0");
-      const y = parsed.getUTCFullYear();
-      if (y > 1950 && y < 2100) return `${d}/${m}/${y}`;
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
     }
   } catch (_) {}
-
   return null;
 }
 
-function extractFileFromRawBody(rawBody, contentType) {
-  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/i);
-  if (!boundaryMatch) throw new Error("No boundary found in content-type: " + contentType);
+async function processBuffer(buffer) {
+  const XLSX = require("xlsx");
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false, raw: false });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
 
-  const boundary = boundaryMatch[1].replace(/^"(.*)"$/, "$1");
-  const bodyStr = rawBody.toString("binary");
-  const delimBoundary = "--" + boundary;
-  const parts = bodyStr.split(delimBoundary);
+  if (!rows || rows.length < 2) throw new Error("File has no data rows");
 
-  for (const part of parts) {
-    if (!part.includes("Content-Disposition")) continue;
-    if (!part.includes('name="file"') && !part.includes("filename=")) continue;
+  const headers = rows[0].map((h) => String(h).trim().toLowerCase());
+  const pinIdx = headers.findIndex((h) => h.includes("pin") || h.includes("reg") || h.includes("roll") || h.includes("id") || h.includes("no"));
+  const dobIdx = headers.findIndex((h) => h.includes("dob") || h.includes("date") || h.includes("birth") || h.includes("born"));
+  const nameIdx = headers.findIndex((h) => h.includes("name") || h.includes("student") || h.includes("candidate"));
 
-    const headerBodySplit = part.indexOf("\r\n\r\n");
-    if (headerBodySplit === -1) continue;
+  if (pinIdx === -1) throw new Error(`PIN column not found. Headers: [${headers.join(", ")}]`);
+  if (dobIdx === -1) throw new Error(`DOB column not found. Headers: [${headers.join(", ")}]`);
 
-    let fileContent = part.substring(headerBodySplit + 4);
-    fileContent = fileContent.replace(/\r\n$/, "");
-    return Buffer.from(fileContent, "binary");
+  const PIN_REGEX = /^\d{5}[A-Z]\d{2}[A-Z0-9]+$/;
+  let importedCount = 0, skippedCount = 0;
+  const errors = [];
+  let currentBatch = db.batch();
+  let batchCount = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((c) => String(c).trim() === "")) continue;
+
+    const rawPin = String(row[pinIdx] || "").trim().toUpperCase();
+    const parsedDob = parseDob(row[dobIdx]);
+    const studentName = nameIdx !== -1 ? String(row[nameIdx] || "").trim() : "";
+
+    if (!PIN_REGEX.test(rawPin)) {
+      skippedCount++;
+      if (errors.length < 20) errors.push(`Row ${i+1}: Invalid PIN "${rawPin}"`);
+      continue;
+    }
+    if (!parsedDob) {
+      skippedCount++;
+      if (errors.length < 20) errors.push(`Row ${i+1}: Cannot parse DOB "${row[dobIdx]}" for PIN ${rawPin}`);
+      continue;
+    }
+
+    currentBatch.set(db.collection("students").doc(rawPin), {
+      pin: rawPin, dob: parsedDob,
+      branch: rawPin.substring(5, 8), year: "20" + rawPin.substring(0, 2),
+      name: studentName, has_submitted: false,
+    }, { merge: true });
+
+    importedCount++; batchCount++;
+    if (batchCount >= 499) {
+      await currentBatch.commit();
+      currentBatch = db.batch();
+      batchCount = 0;
+    }
   }
 
-  throw new Error("No file found in multipart body");
+  if (batchCount > 0) await currentBatch.commit();
+  return { importedCount, skippedCount, errors };
 }
 
-exports.importStudents = async (req, res) => {
-  console.log("=== importStudents via rawBody ===");
+exports.importStudents = (req, res) => {
+  console.log("=== importStudents ===");
   console.log("content-type:", req.headers["content-type"]);
-  console.log("rawBody exists:", !!req.rawBody, "size:", req.rawBody ? req.rawBody.length : 0);
+
+  // Method 1: multer already parsed (req.file exists)
+  if (req.file) {
+    console.log("Using req.file, size:", req.file.size);
+    processBuffer(req.file.buffer)
+      .then(({ importedCount, skippedCount, errors }) => {
+        res.status(200).json({ success: true, importedCount, skippedCount, errors, message: `Successfully imported ${importedCount} students. Skipped ${skippedCount}.` });
+      })
+      .catch((err) => {
+        console.error("Process error:", err.message);
+        res.status(500).json({ error: err.message, code: "SERVER_ERROR" });
+      });
+    return;
+  }
+
+  // Method 2: busboy stream parsing
+  const Busboy = require("busboy");
+  const chunks = [];
 
   try {
-    if (!req.rawBody || req.rawBody.length === 0) {
-      return res.status(400).json({ error: "No file data received", code: "INVALID_REQUEST" });
-    }
+    const busboy = Busboy({ headers: req.headers });
 
-    const contentType = req.headers["content-type"] || "";
-    if (!contentType.includes("multipart/form-data")) {
-      return res.status(400).json({ error: "Expected multipart/form-data, got: " + contentType, code: "INVALID_REQUEST" });
-    }
-
-    let fileBuffer;
-    try {
-      fileBuffer = extractFileFromRawBody(req.rawBody, contentType);
-      console.log("Extracted file buffer size:", fileBuffer.length);
-    } catch (e) {
-      console.error("Failed to extract file:", e.message);
-      return res.status(400).json({ error: "Could not extract file: " + e.message, code: "INVALID_REQUEST" });
-    }
-
-    const XLSX = require("xlsx");
-
-    // Use cellDates:true so XLSX gives us JS Date objects directly — most reliable
-    const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true, raw: false });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" });
-
-    console.log("Rows found:", rows.length);
-    console.log("Header row:", JSON.stringify(rows[0]));
-    if (rows[1]) console.log("Row 1 sample:", JSON.stringify(rows[1]));
-    if (rows[2]) console.log("Row 2 sample:", JSON.stringify(rows[2]));
-
-    if (!rows || rows.length < 2) {
-      return res.status(400).json({ error: "File has no data rows", code: "INVALID_REQUEST" });
-    }
-
-    const headers = rows[0].map((h) => String(h).trim().toLowerCase());
-    const pinIdx = headers.findIndex((h) =>
-      h.includes("pin") || h.includes("reg") || h.includes("roll") || h.includes("id") || h.includes("no")
-    );
-    const dobIdx = headers.findIndex((h) =>
-      h.includes("dob") || h.includes("date") || h.includes("birth") || h.includes("born")
-    );
-    // Name column — optional, won't fail if missing
-    const nameIdx = headers.findIndex((h) =>
-      h.includes("name") || h.includes("student") || h.includes("candidate")
-    );
-
-    console.log("Headers:", headers, "pinIdx:", pinIdx, "dobIdx:", dobIdx, "nameIdx:", nameIdx);
-
-    if (pinIdx === -1) {
-      return res.status(400).json({
-        error: `PIN column not found. Detected headers: [${headers.join(", ")}]`,
-        code: "INVALID_REQUEST",
-      });
-    }
-    if (dobIdx === -1) {
-      return res.status(400).json({
-        error: `DOB column not found. Detected headers: [${headers.join(", ")}]`,
-        code: "INVALID_REQUEST",
-      });
-    }
-
-    const PIN_REGEX = /^\d{5}[A-Z]\d{2}[A-Z0-9]+$/;
-    let importedCount = 0;
-    let skippedCount = 0;
-    const errors = [];
-    let currentBatch = db.batch();
-    let batchCount = 0;
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row.every((c) => String(c).trim() === "")) continue;
-
-      const rawPin = String(row[pinIdx] || "").trim().toUpperCase();
-      const rawDob = row[dobIdx];
-      const parsedDob = parseDob(rawDob);
-      const studentName = nameIdx !== -1 ? String(row[nameIdx] || "").trim() : "";
-
-      console.log(`Row ${i + 1}: PIN="${rawPin}" rawDob=${JSON.stringify(rawDob)} parsedDob=${parsedDob} name="${studentName}"`);
-
-      if (!PIN_REGEX.test(rawPin)) {
-        skippedCount++;
-        if (errors.length < 20) errors.push(`Row ${i + 1}: Invalid PIN "${rawPin}"`);
-        continue;
-      }
-      if (!parsedDob) {
-        skippedCount++;
-        if (errors.length < 20) errors.push(`Row ${i + 1}: Cannot parse DOB "${rawDob}" for PIN ${rawPin}`);
-        continue;
-      }
-
-      currentBatch.set(db.collection("students").doc(rawPin), {
-        pin: rawPin,
-        dob: parsedDob,
-        branch: rawPin.substring(5, 8),
-        year: "20" + rawPin.substring(0, 2),
-        name: studentName,
-        has_submitted: false,
-      }, { merge: true });
-
-      importedCount++;
-      batchCount++;
-
-      if (batchCount >= 499) {
-        await currentBatch.commit();
-        currentBatch = db.batch();
-        batchCount = 0;
-        console.log("Batch committed, total:", importedCount);
-      }
-    }
-
-    if (batchCount > 0) await currentBatch.commit();
-
-    console.log(`Import done: ${importedCount} imported, ${skippedCount} skipped`);
-
-    return res.status(200).json({
-      success: true,
-      importedCount,
-      skippedCount,
-      errors,
-      message: `Successfully imported ${importedCount} students. Skipped ${skippedCount}.`,
+    busboy.on("file", (fieldname, file, info) => {
+      console.log("File field received:", fieldname, info.filename);
+      file.on("data", (chunk) => chunks.push(chunk));
+      file.on("end", () => console.log("File end, chunks:", chunks.length));
     });
 
+    busboy.on("finish", async () => {
+      console.log("Busboy finish, total bytes:", chunks.reduce((a, c) => a + c.length, 0));
+
+      if (chunks.length === 0) {
+        return res.status(400).json({ error: "No file data received. Please select an Excel file.", code: "INVALID_REQUEST" });
+      }
+
+      try {
+        const buffer = Buffer.concat(chunks);
+        const result = await processBuffer(buffer);
+        return res.status(200).json({ success: true, ...result, message: `Successfully imported ${result.importedCount} students. Skipped ${result.skippedCount}.` });
+      } catch (err) {
+        console.error("Process error:", err.message);
+        return res.status(500).json({ error: err.message, code: "SERVER_ERROR" });
+      }
+    });
+
+    busboy.on("error", (err) => {
+      console.error("Busboy error:", err.message);
+      return res.status(500).json({ error: "File parse error: " + err.message, code: "SERVER_ERROR" });
+    });
+
+    req.pipe(busboy);
+
   } catch (err) {
-    console.error("importStudents error:", err.message, err.stack);
-    return res.status(500).json({ error: "Import failed: " + err.message, code: "SERVER_ERROR" });
+    console.error("importStudents error:", err.message);
+    return res.status(500).json({ error: "Server error: " + err.message, code: "SERVER_ERROR" });
   }
 };
