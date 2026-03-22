@@ -31,7 +31,7 @@ import {
   useRealtimeConfig,
 } from "../../hooks/useRealtimeData";
 import ConfirmModal from "../../components/shared/ConfirmModal";
-import Footer from "../../components/shared/Footer";
+// import Footer from "../../components/shared/Footer";
 
 // ── Reusable CSV download helper ──────────────────────────────
 async function downloadBlob(blobPromise, filename) {
@@ -2319,7 +2319,7 @@ export default function AdminDashboard() {
         </AnimatePresence>
       </main>
 
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

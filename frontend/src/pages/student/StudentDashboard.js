@@ -9,7 +9,7 @@ import { submitSelection } from "../../services/api";
 import StudentNavbar from "../../components/shared/StudentNavbar";
 import SubjectAccordionList from "../../components/student/SubjectAccordionList";
 import ConfirmModal from "../../components/shared/ConfirmModal";
-import Footer from "../../components/shared/Footer";
+// import Footer from "../../components/shared/Footer";
 
 function PreviousSelectionsView({ selections }) {
   const [enriched, setEnriched] = useState([]);
@@ -206,7 +206,7 @@ export default function StudentDashboard() {
         <div className="flex-grow flex items-center justify-center h-96">
           <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full spinner" />
         </div>
-        <Footer />
+        {/* <Footer /> */}
       </div>
     );
   }
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
         loading={submitting}
       />
 
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
