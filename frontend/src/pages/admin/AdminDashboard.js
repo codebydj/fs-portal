@@ -22,6 +22,7 @@ import {
   exportCSV,
   exportSubjectsCSV,
   exportFacultyCSV,
+  exportFacultySelectionsWithStudentsCSV,
   exportStudentsCSV,
   importStudents,
 } from "../../services/api";
@@ -37,7 +38,7 @@ import ConfirmModal from "../../components/shared/ConfirmModal";
 async function downloadBlob(blobPromise, filename) {
   const blob = await blobPromise;
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement("a"); //
   a.href = url;
   a.download = filename;
   a.click();
@@ -45,7 +46,7 @@ async function downloadBlob(blobPromise, filename) {
 }
 
 function DownloadCSVButton({ onClick, label = "Download CSV" }) {
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
   const handle = async () => {
     setLoading(true);
     try {
@@ -60,9 +61,9 @@ function DownloadCSVButton({ onClick, label = "Download CSV" }) {
     <button
       onClick={handle}
       disabled={loading}
-      className="flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:text-primary-900 hover:bg-primary-50 border border-primary-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap">
+      className="btn-secondary flex items-center gap-2 w-fit">
       <svg
-        className="w-3.5 h-3.5"
+        className="w-4 h-4"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor">
@@ -126,7 +127,6 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -134,15 +134,12 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
           onClick={onClose}
         />
-
-        {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-modal overflow-hidden">
-          {/* Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold text-slate-900 font-display">
@@ -173,7 +170,6 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
             </button>
           </div>
 
-          {/* Body */}
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -250,7 +246,6 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
             )}
           </div>
 
-          {/* Footer */}
           {students.length > 0 && (
             <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
               <p className="text-xs text-slate-400">
@@ -561,7 +556,6 @@ function DashboardTab({ stats }) {
         </div>
       </div>
 
-      {/* Faculty students modal */}
       {viewFaculty && (
         <FacultyStudentsModal
           faculty={viewFaculty}
@@ -586,6 +580,7 @@ function SubjectsTab({ stats, onRefresh }) {
   const [editLoading, setEditLoading] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!name.trim() || !code.trim())
@@ -827,10 +822,10 @@ function SubjectsTab({ stats, onRefresh }) {
 
 // ── Faculty Tab ───────────────────────────────────────────────
 function FacultyTab({ stats, onRefresh }) {
+  // CHANGE 1: Removed "experience" from initial form state
   const [form, setForm] = useState({
     name: "",
     subject_id: "",
-    experience: "",
     max_limit: "",
   });
   const [loading, setLoading] = useState(false);
@@ -849,13 +844,14 @@ function FacultyTab({ stats, onRefresh }) {
       return toast.error("Name, subject and max seats required");
     setLoading(true);
     try {
+      // CHANGE 2: Removed experience from addFaculty call
       await addFaculty({
         ...form,
-        experience: form.experience ? Number(form.experience) : null,
         max_limit: Number(form.max_limit),
       });
       toast.success("Faculty added!");
-      setForm({ name: "", subject_id: "", experience: "", max_limit: "" });
+      // CHANGE 3: Removed "experience" from reset
+      setForm({ name: "", subject_id: "", max_limit: "" });
       onRefresh();
     } catch (err) {
       toast.error(err.error || "Failed to add faculty");
@@ -866,10 +862,10 @@ function FacultyTab({ stats, onRefresh }) {
 
   const startEdit = (f) => {
     setEditingId(f.id);
+    // CHANGE 4: Removed experience from edit form
     setEditForm({
       name: f.name,
       subject_id: f.subject_id,
-      experience: f.experience ?? "",
       max_limit: f.max_limit,
     });
   };
@@ -881,9 +877,9 @@ function FacultyTab({ stats, onRefresh }) {
   const handleEdit = async (id) => {
     setEditLoading(true);
     try {
+      // CHANGE 5: Removed experience from editFaculty call
       await editFaculty(id, {
         ...editForm,
-        experience: editForm.experience ? Number(editForm.experience) : null,
         max_limit: Number(editForm.max_limit),
       });
       toast.success("Faculty updated!");
@@ -934,6 +930,7 @@ function FacultyTab({ stats, onRefresh }) {
         <h3 className="font-semibold text-slate-900 font-display mb-4">
           Add New Faculty
         </h3>
+        {/* CHANGE 6: Removed experience field from Add form, changed grid */}
         <form
           onSubmit={handleAdd}
           className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -975,22 +972,7 @@ function FacultyTab({ stats, onRefresh }) {
               }
             />
           </div>
-          <div>
-            <label className="label">
-              Experience (yrs){" "}
-              <span className="text-slate-400 font-normal">optional</span>
-            </label>
-            <input
-              type="number"
-              min="0"
-              className="input-field"
-              placeholder="e.g. 5"
-              value={form.experience}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, experience: e.target.value }))
-              }
-            />
-          </div>
+          {/* CHANGE 7: Experience field REMOVED from here */}
           <div className="flex items-end">
             <button
               type="submit"
@@ -1011,7 +993,10 @@ function FacultyTab({ stats, onRefresh }) {
             <DownloadCSVButton
               label="Download CSV"
               onClick={() =>
-                downloadBlob(exportFacultyCSV(), `faculty_${Date.now()}.csv`)
+                downloadBlob(
+                  exportFacultyCSV(),
+                  `faculty_students_grouped_${Date.now()}.csv`,
+                )
               }
             />
             <select
@@ -1042,16 +1027,15 @@ function FacultyTab({ stats, onRefresh }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
+                {/* CHANGE 8: Removed "Exp (yrs)" from table headers */}
                 <tr>
-                  {["Name", "Subject", "Seats", "Exp (yrs)", "Actions"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {["Name", "Subject", "Seats", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -1125,33 +1109,7 @@ function FacultyTab({ stats, onRefresh }) {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min="0"
-                            className="input-field py-1 text-sm w-16"
-                            placeholder="optional"
-                            value={editForm.experience}
-                            onChange={(e) =>
-                              setEditForm((p) => ({
-                                ...p,
-                                experience: e.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          <span className="text-slate-500">
-                            {f.experience != null && f.experience !== "" ? (
-                              `${f.experience}y`
-                            ) : (
-                              <span className="text-slate-300 italic text-xs">
-                                —
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </td>
+                      {/* CHANGE 9: Removed experience <td> column entirely */}
                       <td className="px-4 py-3">
                         {isEditing ? (
                           <div className="flex gap-2">
@@ -1330,7 +1288,6 @@ function StudentsTab({ onRefresh }) {
     }
   };
 
-  // Filter
   const filtered = students.filter((s) => {
     const q = search.toLowerCase();
     return (
@@ -1341,7 +1298,6 @@ function StudentsTab({ onRefresh }) {
     );
   });
 
-  // Sort
   const sorted = [...filtered].sort((a, b) => {
     let aVal = a[sortKey] ?? "";
     let bVal = b[sortKey] ?? "";
@@ -1369,7 +1325,6 @@ function StudentsTab({ onRefresh }) {
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            {/* View filter */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
               {["all", "submitted", "pending"].map((v) => (
                 <button
@@ -1388,7 +1343,6 @@ function StudentsTab({ onRefresh }) {
               ))}
             </div>
 
-            {/* Search + actions */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="relative">
                 <svg
@@ -1572,7 +1526,6 @@ function StudentsTab({ onRefresh }) {
         </div>
       </div>
 
-      {/* Delete single student */}
       <ConfirmModal
         open={!!deletePin}
         title="Delete Student?"
@@ -1584,7 +1537,6 @@ function StudentsTab({ onRefresh }) {
         loading={deleting}
       />
 
-      {/* Delete all students */}
       <ConfirmModal
         open={showResetConfirm}
         title="Delete All Students?"
@@ -1599,7 +1551,6 @@ function StudentsTab({ onRefresh }) {
   );
 }
 
-// ── Settings Tab ──────────────────────────────────────────────
 // ── Admin Countdown ───────────────────────────────────────────
 function AdminCountdown({ endTime, selectionOpen }) {
   const [timeLeft, setTimeLeft] = React.useState(null);
@@ -1697,7 +1648,6 @@ function SettingsTab({
   const handleEndTimeChange = (val) => {
     setEndTime(val);
     if (val) {
-      // datetime-local gives "2026-03-20T04:15" — treat as local time
       const localDate = new Date(val);
       if (isNaN(localDate.getTime()) || localDate <= new Date()) {
         setEndTimeError("End time must be in the future");
@@ -1720,8 +1670,6 @@ function SettingsTab({
     }
     setToggling(true);
     try {
-      // Send ISO string — new Date("2026-03-20T04:15") in browser gives local time
-      // .toISOString() converts to UTC correctly
       const isoEndTime = endTime ? new Date(endTime).toISOString() : undefined;
       await toggleSelection(!isOpen, isoEndTime);
       toast.success(`Selection ${!isOpen ? "opened" : "closed"} successfully.`);
@@ -1977,25 +1925,39 @@ function SettingsTab({
           Export Data
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          Download all faculty selections as CSV.
+          Download faculty selections as CSV.
         </p>
-        <button
-          onClick={handleExport}
-          className="btn-secondary flex items-center gap-2">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-            />
-          </svg>
-          Export as CSV
-        </button>
+        {/* Student-wise export */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleExport}
+            className="btn-secondary flex items-center gap-2 w-fit">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            Export Student-wise CSV
+          </button>
+
+          {/* Faculty-wise export — NEW */}
+          <DownloadCSVButton
+            label="Export Faculty-wise CSV"
+            onClick={() =>
+              downloadBlob(
+                exportFacultyCSV(),
+                `faculty_students_grouped_${Date.now()}.csv`,
+              )
+            }
+          />
+        </div>
       </div>
 
       <div className="card p-5 border-red-200">
@@ -2083,7 +2045,6 @@ export default function AdminDashboard() {
   const [sessionWarning, setSessionWarning] = useState(false);
   const authErrorCount = useRef(0);
 
-  // Check token expiry and warn 30 minutes before
   useEffect(() => {
     const checkExpiry = () => {
       const token = localStorage.getItem("admin_token");
@@ -2106,12 +2067,10 @@ export default function AdminDashboard() {
   const fetchStats = useCallback(async () => {
     try {
       const data = await getAdminStats();
-      authErrorCount.current = 0; // reset on success
+      authErrorCount.current = 0;
       setStats(data);
       setLastUpdated(new Date());
     } catch (err) {
-      // Only redirect to login if we get auth errors consistently
-      // A single network blip should NOT log the admin out
       if (
         err.code === "UNAUTHORIZED" ||
         err.code === "FORBIDDEN" ||
@@ -2123,13 +2082,11 @@ export default function AdminDashboard() {
           `Admin auth error #${authErrorCount.current}:`,
           err.code || err.status,
         );
-        // Only redirect after 3 consecutive auth failures to avoid false positives
         if (authErrorCount.current >= 3) {
           logout();
           navigate("/admin/login");
         }
       } else {
-        // Network error, emulator restart, etc — just log, don't redirect
         console.warn("fetchStats failed (non-auth):", err.message || err.error);
       }
     }
@@ -2145,11 +2102,10 @@ export default function AdminDashboard() {
     fetchStats();
   }, [fetchStats]);
 
-  // Auto-refresh every 60s, but pause when tab is hidden to avoid stale auth errors
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchStats(); // refresh immediately when tab becomes visible again
+        fetchStats();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -2261,7 +2217,6 @@ export default function AdminDashboard() {
       </header>
 
       <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Session expiry warning */}
         {sessionWarning && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -2319,6 +2274,7 @@ export default function AdminDashboard() {
         </AnimatePresence>
       </main>
 
+      {/* Footer is commented out as requested */}
       {/* <Footer /> */}
     </div>
   );

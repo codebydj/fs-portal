@@ -27,26 +27,44 @@ async function request(path, options = {}) {
 
 // ── Auth ─────────────────────────────────────────────────────
 export const studentLogin = (pin, dob) =>
-  request("/auth/student/login", { method: "POST", body: JSON.stringify({ pin, dob }) });
+  request("/auth/student/login", {
+    method: "POST",
+    body: JSON.stringify({ pin, dob }),
+  });
 
 export const adminLogin = (username, password) =>
-  request("/auth/admin/login", { method: "POST", body: JSON.stringify({ username, password }) });
+  request("/auth/admin/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
 
 // ── Student ──────────────────────────────────────────────────
 export const submitSelection = (selections) =>
-  request("/selection/submit", { method: "POST", body: JSON.stringify({ selections }) });
+  request("/selection/submit", {
+    method: "POST",
+    body: JSON.stringify({ selections }),
+  });
 
 // ── Admin — Stats & Students ─────────────────────────────────
 export const getAdminStats = () => request("/admin/stats");
-export const getStudents = (status = "all") => request(`/admin/students?status=${status}`);
-export const deleteStudent = (pin) => request(`/admin/students/${pin}`, { method: "DELETE" });
-export const getFacultyStudents = (facultyId) => request(`/admin/faculty/${facultyId}/students`);
+export const getStudents = (status = "all") =>
+  request(`/admin/students?status=${status}`);
+export const deleteStudent = (pin) =>
+  request(`/admin/students/${pin}`, { method: "DELETE" });
+export const getFacultyStudents = (facultyId) =>
+  request(`/admin/faculty/${facultyId}/students`);
 
 // ── Admin — Subjects ─────────────────────────────────────────
 export const addSubject = (name, code) =>
-  request("/admin/subjects", { method: "POST", body: JSON.stringify({ name, code }) });
+  request("/admin/subjects", {
+    method: "POST",
+    body: JSON.stringify({ name, code }),
+  });
 export const editSubject = (id, name, code) =>
-  request(`/admin/subjects/${id}`, { method: "PUT", body: JSON.stringify({ name, code }) });
+  request(`/admin/subjects/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ name, code }),
+  });
 export const deleteSubject = (id) =>
   request(`/admin/subjects/${id}`, { method: "DELETE" });
 
@@ -54,13 +72,19 @@ export const deleteSubject = (id) =>
 export const addFaculty = (data) =>
   request("/admin/faculty", { method: "POST", body: JSON.stringify(data) });
 export const editFaculty = (id, data) =>
-  request(`/admin/faculty/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  request(`/admin/faculty/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 export const deleteFaculty = (id) =>
   request(`/admin/faculty/${id}`, { method: "DELETE" });
 
 // ── Admin — Settings & Resets ─────────────────────────────────
 export const toggleSelection = (selection_open, end_time) =>
-  request("/admin/toggle-selection", { method: "POST", body: JSON.stringify({ selection_open, end_time }) });
+  request("/admin/toggle-selection", {
+    method: "POST",
+    body: JSON.stringify({ selection_open, end_time }),
+  });
 export const resetSelections = () =>
   request("/admin/reset-selections", { method: "POST" });
 export const resetAllSubjects = () =>
@@ -97,6 +121,16 @@ export const exportStudentsCSV = () => {
   return fetch(`${BASE_URL}/admin/export-students-csv`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then((res) => res.blob());
+};
+
+export const exportFacultySelectionsWithStudentsCSV = () => {
+  const token = getToken();
+  return fetch(
+    `${BASE_URL}/admin/export-faculty-selections-with-students-csv`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  ).then((res) => res.blob());
 };
 
 export const importStudents = (file) => {
