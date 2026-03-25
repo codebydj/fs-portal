@@ -184,10 +184,13 @@ export default function AdminLogin() {
                   </>
                 )}
               </button>
+              <p className="text-center text-sm text-slate-400" mt-2>
+                last updated: 26-03-2026
+              </p>
             </form>
           </div>
 
-          <p className="text-center text-xs text-slate-500 mt-6">
+          <p className="text-center text-base text-slate-500 mt-6">
             Student?{" "}
             <Link
               to="/login"

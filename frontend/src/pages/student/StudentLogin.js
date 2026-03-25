@@ -13,6 +13,32 @@ export default function StudentLogin() {
   const { loginStudent } = useAuth();
   const navigate = useNavigate();
 
+  //logic for data of birth / format
+  const handleDobChange = (e) => {
+    // ❌ Remove everything except digits
+    let value = e.target.value.replace(/[^0-9]/g, "");
+
+    // Limit to 8 digits (DDMMYYYY)
+    if (value.length > 8) value = value.slice(0, 8);
+
+    let formatted = value;
+
+    if (value.length > 4) {
+      formatted = `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`;
+    } else if (value.length > 2) {
+      formatted = `${value.slice(0, 2)}/${value.slice(2)}`;
+    }
+
+    setDob(formatted);
+  };
+
+  //for slash
+  const handleKeyDown = (e) => {
+    if (e.key === "/") {
+      e.preventDefault(); // ❌ block manual slash
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -100,9 +126,6 @@ export default function StudentLogin() {
                   autoComplete="off"
                   autoFocus
                 />
-                <p className="text-xs text-slate-400 mt-1">
-                  Enter your registration PIN (case-insensitive)
-                </p>
               </div>
 
               <div>
@@ -110,14 +133,16 @@ export default function StudentLogin() {
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="DD/MM/YYYY"
+                  placeholder="DDMMYYYY (e.g. 01012000)"
                   value={dob}
-                  onChange={(e) => setDob(e.target.value)}
+                  onChange={handleDobChange}
+                  onKeyDown={handleKeyDown}
                   maxLength={10}
                   autoComplete="off"
+                  inputMode="numeric"
                 />
-                <p className="text-xs text-slate-400 mt-1">
-                  Format: DD/MM/YYYY (e.g. 01/01/2000)
+                <p className="text-sm text-slate-400 mt-2">
+                   Note: "/" is automatically inserted as you type. Do not enter it manually.
                 </p>
               </div>
 
@@ -170,7 +195,7 @@ export default function StudentLogin() {
             </form>
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
+          <p className="text-center text-base text-slate-400 mt-6">
             Admin?{" "}
             <Link
               to="/admin/login"
@@ -180,7 +205,6 @@ export default function StudentLogin() {
           </p>
         </motion.div>
       </div>
-
     </div>
   );
 }
