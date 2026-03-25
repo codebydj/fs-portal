@@ -17,9 +17,12 @@ if (fs.existsSync(envPath)) {
 try {
   const config = functions.config();
   if (config.app) {
-    if (config.app.jwt_secret && !process.env.JWT_SECRET) process.env.JWT_SECRET = config.app.jwt_secret;
-    if (config.app.admin_user && !process.env.ADMIN_USER) process.env.ADMIN_USER = config.app.admin_user;
-    if (config.app.admin_pass && !process.env.ADMIN_PASS) process.env.ADMIN_PASS = config.app.admin_pass;
+    if (config.app.jwt_secret && !process.env.JWT_SECRET)
+      process.env.JWT_SECRET = config.app.jwt_secret;
+    if (config.app.admin_user && !process.env.ADMIN_USER)
+      process.env.ADMIN_USER = config.app.admin_user;
+    if (config.app.admin_pass && !process.env.ADMIN_PASS)
+      process.env.ADMIN_PASS = config.app.admin_pass;
   }
 } catch (_) {}
 
@@ -30,22 +33,24 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  /\.vercel\.app$/,       // any vercel.app subdomain
-  /\.web\.app$/,          // Firebase Hosting
-  /\.firebaseapp\.com$/,  // Firebase Hosting alt domain
+  /\.vercel\.app$/, // any vercel.app subdomain
+  /\.web\.app$/, // Firebase Hosting
+  /\.firebaseapp\.com$/, // Firebase Hosting alt domain
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    const allowed = allowedOrigins.some((o) =>
-      typeof o === "string" ? o === origin : o.test(origin)
-    );
-    callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      const allowed = allowedOrigins.some((o) =>
+        typeof o === "string" ? o === origin : o.test(origin),
+      );
+      callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
+    },
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -53,14 +58,30 @@ const { studentLogin } = require("./controllers/authController");
 const { adminLogin } = require("./controllers/adminAuthController");
 const { submitSelection } = require("./controllers/selectionController");
 const {
-  addSubject, deleteSubject, editSubject,
-  addFaculty, deleteFaculty, editFaculty,
-  toggleSelection, resetSelections,
-  resetAllSubjects, resetAllFaculty, resetStudents,
-  getStats, getStudents, deleteStudent, getFacultyStudents,
+  addSubject,
+  deleteSubject,
+  editSubject,
+  addFaculty,
+  deleteFaculty,
+  editFaculty,
+  toggleSelection,
+  resetSelections,
+  resetAllSubjects,
+  resetAllFaculty,
+  resetStudents,
+  getStats,
+  getStudents,
+  deleteStudent,
+  getFacultyStudents,
 } = require("./controllers/adminController");
 const { importStudents } = require("./controllers/importController");
-const { exportCSV, exportSubjectsCSV, exportFacultyCSV, exportStudentsCSV } = require("./controllers/exportController");
+const {
+  exportCSV,
+  exportSubjectsCSV,
+  exportFacultyCSV,
+  exportStudentsCSV,
+  exportFacultySelectionsWithStudentsCSV,
+} = require("./controllers/exportController");
 const { verifyAdmin } = require("./middlewares/adminAuth");
 const { verifyStudent } = require("./middlewares/studentAuth");
 
@@ -99,6 +120,11 @@ app.post("/admin/import-students", verifyAdmin, importStudents);
 app.get("/admin/export-csv", verifyAdmin, exportCSV);
 app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
 app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
+app.get(
+  "/admin/export-faculty-selections-with-students-csv",
+  verifyAdmin,
+  exportFacultySelectionsWithStudentsCSV,
+);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
 
 exports.api = functions.https.onRequest(app);

@@ -141,74 +141,23 @@ exports.resetSelections = async (req, res) => {
 };
 
 // ── Stats ─────────────────────────────────────────────────────
+// ✅ CHEAP version of getStats
 exports.getStats = async (req, res) => {
   try {
-    const [studentsSnap, selectionsSnap, facultySnap, subjectsSnap, configSnap] = await Promise.all([
-      db.collection("students").get(),
-      db.collection("selections").get(),
-      db.collection("faculty").get(),
-      db.collection("subjects").get(),
-      db.collection("settings").doc("config").get(),
+    const [statsDoc, configSnap, facultySnap, subjectsSnap, recentSnap] = await Promise.all([
+      db.collection("stats").doc("summary").get(),  // 1 read
+      db.collection("settings").doc("config").get(), // 1 read
+      db.collection("faculty").get(),                // still needed for breakdown
+      db.collection("subjects").get(),               // still needed for breakdown
+      db.collection("selections").orderBy("timestamp", "desc").limit(50).get(),
     ]);
 
-    const totalStudents = studentsSnap.size;
+    const stats = statsDoc.data() || {};
 
-    // ── Single source of truth: selections collection ──────────
-    // Count unique PINs that have submitted (from selections, not has_submitted flag)
-    const submittedPins = new Set();
-    const facultySelectionCount = {}; // facultyId → count of unique students
-
-    selectionsSnap.docs.forEach((d) => {
-      const sel = d.data();
-      if (sel.pin) submittedPins.add(sel.pin);
-      if (sel.faculty_id) {
-        facultySelectionCount[sel.faculty_id] = (facultySelectionCount[sel.faculty_id] || 0) + 1;
-      }
-    });
-
-    const submittedStudents = submittedPins.size;
-
-    // Sync faculty current_count with actual selection counts if they differ
-    const faculty = facultySnap.docs.map((d) => {
-      const data = d.data();
-      const actualCount = facultySelectionCount[d.id] || 0;
-      // Use actual count from selections (source of truth)
-      return { id: d.id, ...data, current_count: actualCount };
-    });
-
-    // Auto-fix any drift between faculty.current_count and actual selections
-    const batch = db.batch();
-    let hasDrift = false;
-    facultySnap.docs.forEach((d) => {
-      const storedCount = d.data().current_count || 0;
-      const actualCount = facultySelectionCount[d.id] || 0;
-      if (storedCount !== actualCount) {
-        console.log(`Fixing drift for faculty ${d.id}: stored=${storedCount} actual=${actualCount}`);
-        batch.update(d.ref, { current_count: actualCount });
-        hasDrift = true;
-      }
-    });
-    // Also fix has_submitted flags
-    studentsSnap.docs.forEach((d) => {
-      const hasSubmitted = d.data().has_submitted || false;
-      const actuallySubmitted = submittedPins.has(d.id);
-      if (hasSubmitted !== actuallySubmitted) {
-        console.log(`Fixing has_submitted for ${d.id}: stored=${hasSubmitted} actual=${actuallySubmitted}`);
-        batch.update(d.ref, { has_submitted: actuallySubmitted });
-        hasDrift = true;
-      }
-    });
-    if (hasDrift) await batch.commit();
-
-    const subjects = subjectsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-    // Get recent unique student submissions (deduplicated by PIN)
-    const recentSelectionsSnap = await db.collection("selections")
-      .orderBy("timestamp", "desc").limit(50).get();
-
+    // recentSelections dedup logic (same as before)
     const seenPins = new Set();
     const recentSelections = [];
-    for (const doc of recentSelectionsSnap.docs) {
+    for (const doc of recentSnap.docs) {
       const data = doc.data();
       if (!seenPins.has(data.pin)) {
         seenPins.add(data.pin);
@@ -216,6 +165,9 @@ exports.getStats = async (req, res) => {
       }
       if (recentSelections.length >= 8) break;
     }
+
+    const faculty = facultySnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const subjects = subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const subjectBreakdown = subjects.map((sub) => {
       const subFaculty = faculty.filter((f) => f.subject_id === sub.id);
@@ -225,10 +177,10 @@ exports.getStats = async (req, res) => {
     });
 
     return res.status(200).json({
-      totalStudents,
-      submittedStudents,
-      pendingStudents: totalStudents - submittedStudents,
-      totalSelections: selectionsSnap.size,
+      totalStudents: stats.totalStudents || 0,
+      submittedStudents: stats.submittedStudents || 0,
+      pendingStudents: (stats.totalStudents || 0) - (stats.submittedStudents || 0),
+      totalSelections: stats.totalSelections || 0,
       faculty,
       subjects,
       subjectBreakdown,
@@ -241,6 +193,25 @@ exports.getStats = async (req, res) => {
   }
 };
 
+// Call this after a student submits their selection
+exports.updateStatsSummary = async () => {
+  const [studentsSnap, selectionsSnap] = await Promise.all([
+    db.collection("students").get(),
+    db.collection("selections").get(),
+  ]);
+
+  const submittedPins = new Set();
+  selectionsSnap.docs.forEach((d) => {
+    if (d.data().pin) submittedPins.add(d.data().pin);
+  });
+
+  await db.collection("stats").doc("summary").set({
+    totalStudents: studentsSnap.size,
+    submittedStudents: submittedPins.size,
+    totalSelections: selectionsSnap.size,
+    updatedAt: new Date(),
+  });
+};
 // ── Helper: parse DOB to DD/MM/YYYY ──────────────────────────
 function parseDob(raw) {
   if (!raw && raw !== 0) return null;
@@ -638,3 +609,5 @@ exports.getFacultyStudents = async (req, res) => {
     return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
+
+//adminController.js
