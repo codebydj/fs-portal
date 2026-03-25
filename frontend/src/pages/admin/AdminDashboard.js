@@ -35,17 +35,23 @@ import ConfirmModal from "../../components/shared/ConfirmModal";
 
 // ── Reusable CSV download helper ──────────────────────────────
 async function downloadBlob(blobPromise, filename) {
-  const blob = await blobPromise;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); //
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  try {
+    const blob = await blobPromise;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); //
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported!");
+  } catch (err) {
+    toast.error("Export failed.");
+  }
 }
 
 function DownloadCSVButton({ onClick, label = "Download CSV" }) {
   const [loading, setLoading] = useState(false);
+
   const handle = async () => {
     setLoading(true);
     try {
@@ -56,24 +62,36 @@ function DownloadCSVButton({ onClick, label = "Download CSV" }) {
       setLoading(false);
     }
   };
+
   return (
     <button
       onClick={handle}
       disabled={loading}
-      className="btn-secondary flex items-center gap-2 w-fit">
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-        />
-      </svg>
-      {loading ? "Exporting..." : label}
+      className={`btn-secondary flex items-center gap-2 w-fit ${
+        loading ? "opacity-70 cursor-not-allowed" : ""
+      }`}>
+      {loading ? (
+        <>
+          <span className="animate-spin">⏳</span>
+          Exporting...
+        </>
+      ) : (
+        <>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+          {label}
+        </>
+      )}
     </button>
   );
 }
@@ -837,6 +855,19 @@ function FacultyTab({ stats, onRefresh }) {
   const [resetting, setResetting] = useState(false);
   const [filterSubject, setFilterSubject] = useState("");
 
+  //date for csv filename
+  const today = new Date();
+  const formatteddate =
+    String(today.getDate()).padStart(2, "0") +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    today.getFullYear() +
+    "_" +
+    String(today.getHours()).padStart(2, "0") +
+    "_" +
+    String(today.getMinutes()).padStart(2, "0");
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!form.name || !form.subject_id || !form.max_limit)
@@ -994,7 +1025,7 @@ function FacultyTab({ stats, onRefresh }) {
               onClick={() =>
                 downloadBlob(
                   exportFacultyCSV(),
-                  `faculty_students_grouped_${Date.now()}.csv`,
+                  `faculty_list_${formatteddate}.csv`,
                 )
               }
             />
@@ -1630,6 +1661,21 @@ function SettingsTab({
   const [endTimeError, setEndTimeError] = useState("");
   const isOpen = stats?.config?.selection_open;
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  //date for csv filename
+  const today = new Date();
+  const formatteddate =
+    String(today.getDate()).padStart(2, "0") +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    today.getFullYear() +
+    "_" +
+    String(today.getHours()).padStart(2, "0") +
+    "-" +
+    String(today.getMinutes()).padStart(2, "0");
+
   const savedEndTimeStr = realtimeEndTime
     ? realtimeEndTime.toLocaleString("en-IN", {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -1696,6 +1742,7 @@ function SettingsTab({
   };
 
   const handleExport = async () => {
+    setIsExporting(true);
     try {
       const blob = await exportCSV();
       const url = URL.createObjectURL(blob);
@@ -1707,6 +1754,8 @@ function SettingsTab({
       toast.success("CSV exported!");
     } catch (err) {
       toast.error("Export failed.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1930,20 +1979,30 @@ function SettingsTab({
         <div className="flex flex-col gap-3">
           <button
             onClick={handleExport}
+            disabled={isExporting}
             className="btn-secondary flex items-center gap-2 w-fit">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            Export Student-wise CSV
+            {isExporting ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Export Student-wise CSV
+              </>
+            )}
           </button>
 
           {/* Faculty-wise export — NEW */}
@@ -1952,7 +2011,7 @@ function SettingsTab({
             onClick={() =>
               downloadBlob(
                 exportFacultyCSV(),
-                `faculty_students_grouped_${Date.now()}.csv`,
+                `faculty_wise${formatteddate}.csv`,
               )
             }
           />

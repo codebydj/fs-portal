@@ -226,7 +226,7 @@ exports.exportFacultyCSV = async (req, res) => {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="faculty_students_grouped.csv"',
+      'attachment; filename="faculty_wise.csv"',
     );
     return res.status(200).send(csv);
   } catch (err) {
