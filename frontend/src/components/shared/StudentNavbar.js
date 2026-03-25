@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import CountdownTimer from "./CountdownTimer";
 
 export default function StudentNavbar() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
