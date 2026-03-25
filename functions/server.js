@@ -19,21 +19,28 @@ const allowedOrigins = [
   /\.firebaseapp\.com$/,
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    const allowed = allowedOrigins.some((o) =>
-      typeof o === "string" ? o === origin : o.test(origin)
-    );
-    callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = allowedOrigins.some((o) =>
+        typeof o === "string" ? o === origin : o.test(origin),
+      );
+      callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
+    },
+    credentials: true,
+  }),
+);
 
 // ── File upload BEFORE express.json ──────────────────────────
 const { importStudents } = require("./controllers/importController");
 const { verifyAdmin } = require("./middlewares/adminAuth");
-app.post("/admin/import-students", verifyAdmin, upload.single("file"), importStudents);
+app.post(
+  "/admin/import-students",
+  verifyAdmin,
+  upload.single("file"),
+  importStudents,
+);
 
 // ── JSON body parsing for all other routes ────────────────────
 app.use(express.json());
@@ -44,13 +51,28 @@ const { studentLogin } = require("./controllers/authController");
 const { adminLogin } = require("./controllers/adminAuthController");
 const { submitSelection } = require("./controllers/selectionController");
 const {
-  addSubject, deleteSubject, editSubject,
-  addFaculty, deleteFaculty, editFaculty,
-  toggleSelection, resetSelections,
-  resetAllSubjects, resetAllFaculty, resetStudents,
-  getStats, getStudents, deleteStudent, getFacultyStudents,
+  addSubject,
+  deleteSubject,
+  editSubject,
+  addFaculty,
+  deleteFaculty,
+  editFaculty,
+  toggleSelection,
+  resetSelections,
+  resetAllSubjects,
+  resetAllFaculty,
+  resetStudents,
+  getStats,
+  getStudents,
+  deleteStudent,
+  getFacultyStudents,
 } = require("./controllers/adminController");
-const { exportCSV, exportSubjectsCSV, exportFacultyCSV, exportStudentsCSV } = require("./controllers/exportController");
+const {
+  exportCSV,
+  exportSubjectsCSV,
+  exportFacultyCSV,
+  exportStudentsCSV,
+} = require("./controllers/exportController");
 const { verifyStudent } = require("./middlewares/studentAuth");
 
 app.post("/auth/student/login", studentLogin);
@@ -78,6 +100,8 @@ app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`✅ Faculty Portal API running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`✅ Faculty Portal API running on port ${PORT}`),
+);
 
 //server.js

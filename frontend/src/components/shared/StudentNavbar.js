@@ -50,11 +50,11 @@ export default function StudentNavbar() {
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="hidden sm:block text-right">
             <p className="text-sm font-medium text-slate-800 leading-tight">
-              {user?.name || user?.pin}
+              PIN: {user?.pin}
             </p>
-            <p className="text-xs text-slate-400 leading-tight">
+            {/* <p className="text-xs text-slate-400 leading-tight">
               {user?.branch} · {user?.year}
-            </p>
+            </p> */}
           </div>
 
           <button

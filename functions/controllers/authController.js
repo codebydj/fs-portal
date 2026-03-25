@@ -22,30 +22,46 @@ exports.studentLogin = async (req, res) => {
     const { pin, dob } = req.body;
 
     if (!pin || !dob) {
-      return res.status(400).json({ error: "PIN and date of birth are required", code: "INVALID_CREDENTIALS" });
+      return res
+        .status(400)
+        .json({
+          error: "PIN and date of birth are required",
+          code: "INVALID_CREDENTIALS",
+        });
     }
 
     const normalizedPin = pin.trim().toUpperCase();
 
     if (!PIN_REGEX.test(normalizedPin)) {
-      return res.status(401).json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+      return res
+        .status(401)
+        .json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
     }
 
     const dobRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dobRegex.test(dob.trim())) {
-      return res.status(401).json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+      return res
+        .status(401)
+        .json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
     }
 
-    const studentSnap = await db.collection("students").doc(normalizedPin).get();
+    const studentSnap = await db
+      .collection("students")
+      .doc(normalizedPin)
+      .get();
 
     if (!studentSnap.exists) {
-      return res.status(401).json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+      return res
+        .status(401)
+        .json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
     }
 
     const student = studentSnap.data();
 
     if (dob.trim() !== student.dob.trim()) {
-      return res.status(401).json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+      return res
+        .status(401)
+        .json({ error: "Invalid credentials", code: "INVALID_CREDENTIALS" });
     }
 
     const parsed = parsePIN(normalizedPin);
@@ -59,14 +75,21 @@ exports.studentLogin = async (req, res) => {
         role: "student",
       },
       JWT_SECRET,
-      { expiresIn: "8h" }
+      { expiresIn: "8h" },
     );
 
-    console.log("studentLogin: token signed for pin:", normalizedPin, "role: student");
+    console.log(
+      "studentLogin: token signed for pin:",
+      normalizedPin,
+      "role: student",
+    );
 
     let previousSelections = null;
     if (student.has_submitted) {
-      const sel = await db.collection("selections").where("pin", "==", normalizedPin).get();
+      const sel = await db
+        .collection("selections")
+        .where("pin", "==", normalizedPin)
+        .get();
       previousSelections = sel.docs.map((d) => d.data());
     }
 
@@ -81,10 +104,14 @@ exports.studentLogin = async (req, res) => {
       },
       has_submitted: student.has_submitted || false,
       previous_selections: previousSelections,
-      message: student.has_submitted ? "You have already submitted your faculty selection." : null,
+      message: student.has_submitted
+        ? "You have already submitted your faculty selection."
+        : null,
     });
   } catch (err) {
     console.error("Student login error:", err);
-    return res.status(500).json({ error: "Internal server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Internal server error", code: "SERVER_ERROR" });
   }
 };
