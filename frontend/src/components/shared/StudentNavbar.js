@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import CountdownTimer from "./CountdownTimer";
 
 export default function StudentNavbar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -49,12 +49,12 @@ export default function StudentNavbar() {
         {/* User + Logout */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="hidden sm:block text-right">
-            {/* <p className="text-sm font-medium text-slate-800 leading-tight">
+            <p className="text-sm font-medium text-slate-800 leading-tight">
               {user?.name || user?.pin}
-            </p> */}
-            {/* <p className="text-xs text-slate-400 leading-tight">
+            </p>
+            <p className="text-xs text-slate-400 leading-tight">
               {user?.branch} · {user?.year}
-            </p> */}
+            </p>
           </div>
 
           <button

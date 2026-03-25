@@ -6,7 +6,10 @@ const db = admin.firestore();
 exports.addSubject = async (req, res) => {
   try {
     const { name, code } = req.body;
-    if (!name || !code) return res.status(400).json({ error: "Name and code required", code: "INVALID_REQUEST" });
+    if (!name || !code)
+      return res
+        .status(400)
+        .json({ error: "Name and code required", code: "INVALID_REQUEST" });
 
     const trimmedName = name.trim().toLowerCase();
     const trimmedCode = code.trim().toUpperCase();
@@ -16,18 +19,30 @@ exports.addSubject = async (req, res) => {
     for (const doc of existingSnap.docs) {
       const data = doc.data();
       if (data.name.trim().toLowerCase() === trimmedName) {
-        return res.status(409).json({ error: `Subject "${name.trim()}" already exists`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Subject "${name.trim()}" already exists`,
+          code: "ALREADY_EXISTS",
+        });
       }
       if (data.code.trim().toUpperCase() === trimmedCode) {
-        return res.status(409).json({ error: `Subject code "${trimmedCode}" already exists`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Subject code "${trimmedCode}" already exists`,
+          code: "ALREADY_EXISTS",
+        });
       }
     }
 
-    const ref = await db.collection("subjects").add({ name: name.trim(), code: trimmedCode });
-    return res.status(201).json({ id: ref.id, name: name.trim(), code: trimmedCode });
+    const ref = await db
+      .collection("subjects")
+      .add({ name: name.trim(), code: trimmedCode });
+    return res
+      .status(201)
+      .json({ id: ref.id, name: name.trim(), code: trimmedCode });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -35,14 +50,19 @@ exports.deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
     await db.collection("subjects").doc(id).delete();
-    const facultySnap = await db.collection("faculty").where("subject_id", "==", id).get();
+    const facultySnap = await db
+      .collection("faculty")
+      .where("subject_id", "==", id)
+      .get();
     const batch = db.batch();
     facultySnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -51,19 +71,30 @@ exports.addFaculty = async (req, res) => {
   try {
     const { name, subject_id, experience, max_limit } = req.body;
     if (!name || !subject_id || !max_limit) {
-      return res.status(400).json({ error: "Name, subject_id and max_limit required", code: "INVALID_REQUEST" });
+      return res.status(400).json({
+        error: "Name, subject_id and max_limit required",
+        code: "INVALID_REQUEST",
+      });
     }
 
     const subjectSnap = await db.collection("subjects").doc(subject_id).get();
     if (!subjectSnap.exists) {
-      return res.status(404).json({ error: "Subject not found", code: "NOT_FOUND" });
+      return res
+        .status(404)
+        .json({ error: "Subject not found", code: "NOT_FOUND" });
     }
 
     const trimmedName = name.trim().toLowerCase();
-    const existingSnap = await db.collection("faculty").where("subject_id", "==", subject_id).get();
+    const existingSnap = await db
+      .collection("faculty")
+      .where("subject_id", "==", subject_id)
+      .get();
     for (const doc of existingSnap.docs) {
       if (doc.data().name.trim().toLowerCase() === trimmedName) {
-        return res.status(409).json({ error: `Faculty "${name.trim()}" already exists for this subject`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Faculty "${name.trim()}" already exists for this subject`,
+          code: "ALREADY_EXISTS",
+        });
       }
     }
 
@@ -74,10 +105,14 @@ exports.addFaculty = async (req, res) => {
       max_limit: Number(max_limit),
       current_count: 0,
     });
-    return res.status(201).json({ id: ref.id, name: name.trim(), subject_id, max_limit });
+    return res
+      .status(201)
+      .json({ id: ref.id, name: name.trim(), subject_id, max_limit });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -88,7 +123,9 @@ exports.deleteFaculty = async (req, res) => {
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -101,18 +138,30 @@ exports.toggleSelection = async (req, res) => {
     if (end_time && String(end_time).trim() !== "") {
       const parsedDate = new Date(end_time);
       console.log("toggleSelection: raw end_time received:", end_time);
-      console.log("toggleSelection: parsed as:", parsedDate.toISOString(), "local:", parsedDate.toString());
+      console.log(
+        "toggleSelection: parsed as:",
+        parsedDate.toISOString(),
+        "local:",
+        parsedDate.toString(),
+      );
       if (!isNaN(parsedDate.getTime())) {
         data.end_time = Timestamp.fromDate(parsedDate);
       }
     }
 
     await db.collection("settings").doc("config").set(data, { merge: true });
-    console.log("toggleSelection saved:", { selection_open: data.selection_open, end_time: data.end_time });
-    return res.status(200).json({ success: true, selection_open: data.selection_open });
+    console.log("toggleSelection saved:", {
+      selection_open: data.selection_open,
+      end_time: data.end_time,
+    });
+    return res
+      .status(200)
+      .json({ success: true, selection_open: data.selection_open });
   } catch (err) {
     console.error("toggleSelection error:", err.message);
-    return res.status(500).json({ error: "Server error: " + err.message, code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error: " + err.message, code: "SERVER_ERROR" });
   }
 };
 
@@ -125,74 +174,116 @@ exports.resetSelections = async (req, res) => {
 
     const facultySnap = await db.collection("faculty").get();
     const facBatch = db.batch();
-    facultySnap.docs.forEach((d) => facBatch.update(d.ref, { current_count: 0 }));
+    facultySnap.docs.forEach((d) =>
+      facBatch.update(d.ref, { current_count: 0 }),
+    );
     await facBatch.commit();
 
     const studSnap = await db.collection("students").get();
     const studBatch = db.batch();
-    studSnap.docs.forEach((d) => studBatch.update(d.ref, { has_submitted: false }));
+    studSnap.docs.forEach((d) =>
+      studBatch.update(d.ref, { has_submitted: false }),
+    );
     await studBatch.commit();
 
-    return res.status(200).json({ success: true, message: "All selections reset successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "All selections reset successfully" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
 // ── Stats ─────────────────────────────────────────────────────
-// ✅ CHEAP version of getStats
 exports.getStats = async (req, res) => {
   try {
-    const [statsDoc, configSnap, facultySnap, subjectsSnap, recentSnap] = await Promise.all([
-      db.collection("stats").doc("summary").get(),  // 1 read
-      db.collection("settings").doc("config").get(), // 1 read
-      db.collection("faculty").get(),                // still needed for breakdown
-      db.collection("subjects").get(),               // still needed for breakdown
-      db.collection("selections").orderBy("timestamp", "desc").limit(50).get(),
+    // 1. Fetch all data
+    const [
+      studentsSnap,
+      selectionsSnap,
+      facultySnap,
+      subjectsSnap,
+      configSnap,
+    ] = await Promise.all([
+      db.collection("students").get(),
+      db.collection("selections").get(),
+      db.collection("faculty").get(),
+      db.collection("subjects").get(),
+      db.collection("settings").doc("config").get(),
     ]);
 
-    const stats = statsDoc.data() || {};
+    // 2. Count UNIQUE students who have actually submitted a selection
+    const submittedPins = new Set();
+    const facultySelectionCount = {};
 
-    // recentSelections dedup logic (same as before)
-    const seenPins = new Set();
-    const recentSelections = [];
-    for (const doc of recentSnap.docs) {
-      const data = doc.data();
-      if (!seenPins.has(data.pin)) {
-        seenPins.add(data.pin);
-        recentSelections.push({ id: doc.id, ...data });
+    selectionsSnap.docs.forEach((d) => {
+      const sel = d.data();
+      if (sel.pin) {
+        submittedPins.add(sel.pin);
       }
-      if (recentSelections.length >= 8) break;
-    }
+      if (sel.faculty_id) {
+        facultySelectionCount[sel.faculty_id] =
+          (facultySelectionCount[sel.faculty_id] || 0) + 1;
+      }
+    });
 
-    const faculty = facultySnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const subjects = subjectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // 3. FORCE the counts based on actual database sizes
+    const totalStudents = studentsSnap.size;
+    const submittedStudents = submittedPins.size;
+    const pendingStudents = Math.max(0, totalStudents - submittedStudents);
 
+    // 4. Map Faculty with actual counts from the selections collection
+    const faculty = facultySnap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      current_count: facultySelectionCount[d.id] || 0,
+    }));
+
+    const subjects = subjectsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // 5. Build the Subject Breakdown
     const subjectBreakdown = subjects.map((sub) => {
       const subFaculty = faculty.filter((f) => f.subject_id === sub.id);
-      const totalSeats = subFaculty.reduce((acc, f) => acc + f.max_limit, 0);
-      const filledSeats = subFaculty.reduce((acc, f) => acc + f.current_count, 0);
+      const totalSeats = subFaculty.reduce(
+        (acc, f) => acc + (Number(f.max_limit) || 0),
+        0,
+      );
+      const filledSeats = subFaculty.reduce(
+        (acc, f) => acc + (f.current_count || 0),
+        0,
+      );
       return { subject: sub, faculty: subFaculty, totalSeats, filledSeats };
     });
 
+    // 6. Final JSON Response — matching exactly what AdminDashboard.js expects
     return res.status(200).json({
-      totalStudents: stats.totalStudents || 0,
-      submittedStudents: stats.submittedStudents || 0,
-      pendingStudents: (stats.totalStudents || 0) - (stats.submittedStudents || 0),
-      totalSelections: stats.totalSelections || 0,
+      totalStudents,
+      submittedStudents,
+      pendingStudents,
+      totalSelections: selectionsSnap.size,
       faculty,
       subjects,
       subjectBreakdown,
-      recentSelections,
-      config: configSnap.exists ? configSnap.data() : {},
+      recentSelections: selectionsSnap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort(
+          (a, b) => (b.timestamp?._seconds || 0) - (a.timestamp?._seconds || 0),
+        )
+        .slice(0, 8),
+      config: configSnap.exists ? configSnap.data() : { selection_open: false },
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    console.error("Stats Calculation Error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", message: err.message });
   }
 };
-
+// The updateStatsSummary function is not actively used in the current frontend
+// logic as getStats now calculates all necessary data directly.
 // Call this after a student submits their selection
 exports.updateStatsSummary = async () => {
   const [studentsSnap, selectionsSnap] = await Promise.all([
@@ -272,7 +363,12 @@ exports.importStudents = async (req, res) => {
       });
     }
 
-    console.log("File received:", req.file.originalname, "size:", req.file.size);
+    console.log(
+      "File received:",
+      req.file.originalname,
+      "size:",
+      req.file.size,
+    );
 
     // Lazy-require xlsx to avoid load errors
     let XLSX;
@@ -289,7 +385,11 @@ exports.importStudents = async (req, res) => {
     // Parse workbook
     let workbook;
     try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer", cellDates: false, raw: false });
+      workbook = XLSX.read(req.file.buffer, {
+        type: "buffer",
+        cellDates: false,
+        raw: false,
+      });
     } catch (e) {
       console.error("Failed to parse Excel file:", e.message);
       return res.status(400).json({
@@ -300,7 +400,11 @@ exports.importStudents = async (req, res) => {
 
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      raw: true,
+      defval: "",
+    });
 
     console.log("Total rows:", rows.length);
     console.log("Header row:", JSON.stringify(rows[0]));
@@ -308,18 +412,29 @@ exports.importStudents = async (req, res) => {
     if (rows[2]) console.log("Second data row:", JSON.stringify(rows[2]));
 
     if (!rows || rows.length < 2) {
-      return res.status(400).json({ error: "File has no data rows", code: "INVALID_REQUEST" });
+      return res
+        .status(400)
+        .json({ error: "File has no data rows", code: "INVALID_REQUEST" });
     }
 
     // Detect column indexes
     const headers = rows[0].map((h) => String(h).trim().toLowerCase());
     console.log("Detected headers:", headers);
 
-    const pinIdx = headers.findIndex((h) =>
-      h.includes("pin") || h.includes("reg") || h.includes("roll") || h.includes("id") || h.includes("no")
+    const pinIdx = headers.findIndex(
+      (h) =>
+        h.includes("pin") ||
+        h.includes("reg") ||
+        h.includes("roll") ||
+        h.includes("id") ||
+        h.includes("no"),
     );
-    const dobIdx = headers.findIndex((h) =>
-      h.includes("dob") || h.includes("date") || h.includes("birth") || h.includes("born")
+    const dobIdx = headers.findIndex(
+      (h) =>
+        h.includes("dob") ||
+        h.includes("date") ||
+        h.includes("birth") ||
+        h.includes("born"),
     );
 
     console.log("pinIdx:", pinIdx, "dobIdx:", dobIdx);
@@ -348,19 +463,25 @@ exports.importStudents = async (req, res) => {
       const row = rows[i];
       if (!row || row.every((c) => String(c).trim() === "")) continue;
 
-      const rawPin = String(row[pinIdx] || "").trim().toUpperCase();
+      const rawPin = String(row[pinIdx] || "")
+        .trim()
+        .toUpperCase();
       const rawDob = row[dobIdx];
       const parsedDob = parseDob(rawDob);
 
       if (!PIN_REGEX.test(rawPin)) {
         skippedCount++;
-        if (errors.length < 20) errors.push(`Row ${i + 1}: Invalid PIN "${rawPin}"`);
+        if (errors.length < 20)
+          errors.push(`Row ${i + 1}: Invalid PIN "${rawPin}"`);
         continue;
       }
 
       if (!parsedDob) {
         skippedCount++;
-        if (errors.length < 20) errors.push(`Row ${i + 1}: Cannot parse DOB "${rawDob}" for PIN ${rawPin}`);
+        if (errors.length < 20)
+          errors.push(
+            `Row ${i + 1}: Cannot parse DOB "${rawDob}" for PIN ${rawPin}`,
+          );
         continue;
       }
 
@@ -368,14 +489,18 @@ exports.importStudents = async (req, res) => {
       const branch = rawPin.substring(5, 8);
 
       const studentRef = db.collection("students").doc(rawPin);
-      currentBatch.set(studentRef, {
-        pin: rawPin,
-        dob: parsedDob,
-        branch,
-        year,
-        name: "",
-        has_submitted: false,
-      }, { merge: true });
+      currentBatch.set(
+        studentRef,
+        {
+          pin: rawPin,
+          dob: parsedDob,
+          branch,
+          year,
+          name: "",
+          has_submitted: false,
+        },
+        { merge: true },
+      );
 
       importedCount++;
       batchCount++;
@@ -392,7 +517,9 @@ exports.importStudents = async (req, res) => {
       await currentBatch.commit();
     }
 
-    console.log(`Import done: ${importedCount} imported, ${skippedCount} skipped`);
+    console.log(
+      `Import done: ${importedCount} imported, ${skippedCount} skipped`,
+    );
 
     return res.status(200).json({
       success: true,
@@ -401,7 +528,6 @@ exports.importStudents = async (req, res) => {
       errors,
       message: `Successfully imported ${importedCount} students. Skipped ${skippedCount}.`,
     });
-
   } catch (err) {
     console.error("importStudents CRASH:", err.message);
     console.error("Stack:", err.stack);
@@ -417,7 +543,10 @@ exports.editSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, code } = req.body;
-    if (!name || !code) return res.status(400).json({ error: "Name and code required", code: "INVALID_REQUEST" });
+    if (!name || !code)
+      return res
+        .status(400)
+        .json({ error: "Name and code required", code: "INVALID_REQUEST" });
 
     const trimmedName = name.trim().toLowerCase();
     const trimmedCode = code.trim().toUpperCase();
@@ -428,18 +557,29 @@ exports.editSubject = async (req, res) => {
       if (doc.id === id) continue;
       const data = doc.data();
       if (data.name.trim().toLowerCase() === trimmedName) {
-        return res.status(409).json({ error: `Subject "${name.trim()}" already exists`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Subject "${name.trim()}" already exists`,
+          code: "ALREADY_EXISTS",
+        });
       }
       if (data.code.trim().toUpperCase() === trimmedCode) {
-        return res.status(409).json({ error: `Subject code "${trimmedCode}" already exists`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Subject code "${trimmedCode}" already exists`,
+          code: "ALREADY_EXISTS",
+        });
       }
     }
 
-    await db.collection("subjects").doc(id).update({ name: name.trim(), code: trimmedCode });
+    await db
+      .collection("subjects")
+      .doc(id)
+      .update({ name: name.trim(), code: trimmedCode });
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -449,28 +589,42 @@ exports.editFaculty = async (req, res) => {
     const { id } = req.params;
     const { name, subject_id, experience, max_limit } = req.body;
     if (!name || !subject_id || !max_limit) {
-      return res.status(400).json({ error: "Name, subject_id and max_limit required", code: "INVALID_REQUEST" });
+      return res.status(400).json({
+        error: "Name, subject_id and max_limit required",
+        code: "INVALID_REQUEST",
+      });
     }
 
     const trimmedName = name.trim().toLowerCase();
-    const existingSnap = await db.collection("faculty").where("subject_id", "==", subject_id).get();
+    const existingSnap = await db
+      .collection("faculty")
+      .where("subject_id", "==", subject_id)
+      .get();
     for (const doc of existingSnap.docs) {
       if (doc.id === id) continue;
       if (doc.data().name.trim().toLowerCase() === trimmedName) {
-        return res.status(409).json({ error: `Faculty "${name.trim()}" already exists for this subject`, code: "ALREADY_EXISTS" });
+        return res.status(409).json({
+          error: `Faculty "${name.trim()}" already exists for this subject`,
+          code: "ALREADY_EXISTS",
+        });
       }
     }
 
-    await db.collection("faculty").doc(id).update({
-      name: name.trim(),
-      subject_id,
-      experience: experience ? Number(experience) : null,
-      max_limit: Number(max_limit),
-    });
+    await db
+      .collection("faculty")
+      .doc(id)
+      .update({
+        name: name.trim(),
+        subject_id,
+        experience: experience ? Number(experience) : null,
+        max_limit: Number(max_limit),
+      });
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -489,10 +643,14 @@ exports.resetAllSubjects = async (req, res) => {
     subjectsSnap.docs.forEach((d) => subBatch.delete(d.ref));
     await subBatch.commit();
 
-    return res.status(200).json({ success: true, message: "All subjects and faculty deleted" });
+    return res
+      .status(200)
+      .json({ success: true, message: "All subjects and faculty deleted" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -503,10 +661,14 @@ exports.resetAllFaculty = async (req, res) => {
     const batch = db.batch();
     facultySnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
-    return res.status(200).json({ success: true, message: "All faculty deleted" });
+    return res
+      .status(200)
+      .json({ success: true, message: "All faculty deleted" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -517,10 +679,14 @@ exports.resetStudents = async (req, res) => {
     const batch = db.batch();
     studentsSnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
-    return res.status(200).json({ success: true, message: "All student data deleted" });
+    return res
+      .status(200)
+      .json({ success: true, message: "All student data deleted" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -531,13 +697,17 @@ exports.getStudents = async (req, res) => {
     const studentsSnap = await db.collection("students").get();
     let students = studentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    if (status === "submitted") students = students.filter((s) => s.has_submitted);
-    else if (status === "pending") students = students.filter((s) => !s.has_submitted);
+    if (status === "submitted")
+      students = students.filter((s) => s.has_submitted);
+    else if (status === "pending")
+      students = students.filter((s) => !s.has_submitted);
 
     return res.status(200).json({ students, total: students.length });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -545,10 +715,16 @@ exports.getStudents = async (req, res) => {
 exports.deleteStudent = async (req, res) => {
   try {
     const { pin } = req.params;
-    if (!pin) return res.status(400).json({ error: "PIN required", code: "INVALID_REQUEST" });
+    if (!pin)
+      return res
+        .status(400)
+        .json({ error: "PIN required", code: "INVALID_REQUEST" });
 
     // Also delete their selections if any
-    const selectionsSnap = await db.collection("selections").where("pin", "==", pin).get();
+    const selectionsSnap = await db
+      .collection("selections")
+      .where("pin", "==", pin)
+      .get();
     if (!selectionsSnap.empty) {
       const batch = db.batch();
       // Decrement faculty counts for each selection
@@ -567,7 +743,9 @@ exports.deleteStudent = async (req, res) => {
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error("deleteStudent error:", err.message);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -582,7 +760,9 @@ exports.getFacultyStudents = async (req, res) => {
     ]);
 
     const studentsMap = {};
-    studentsSnap.docs.forEach((d) => { studentsMap[d.id] = d.data(); });
+    studentsSnap.docs.forEach((d) => {
+      studentsMap[d.id] = d.data();
+    });
 
     const students = selectionsSnap.docs.map((d) => {
       const sel = d.data();
@@ -606,7 +786,9 @@ exports.getFacultyStudents = async (req, res) => {
     return res.status(200).json({ students, total: students.length });
   } catch (err) {
     console.error("getFacultyStudents error:", err.message);
-    return res.status(500).json({ error: "Server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
 
