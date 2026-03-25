@@ -22,7 +22,6 @@ import {
   exportCSV,
   exportSubjectsCSV,
   exportFacultyCSV,
-  exportFacultySelectionsWithStudentsCSV,
   exportStudentsCSV,
   importStudents,
 } from "../../services/api";
