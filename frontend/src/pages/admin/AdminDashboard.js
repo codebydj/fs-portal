@@ -1915,7 +1915,7 @@ function SettingsTab({
           Import Students
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          Upload an Excel (.xlsx) file with PIN and DOB columns.
+          Upload an Excel (.xlsx) file with NAME , PIN and DOB columns.
         </p>
         <label
           className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
