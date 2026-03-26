@@ -1652,16 +1652,38 @@ function SettingsTab({
   realtimeEndTime,
   realtimeSelectionOpen,
 }) {
+  const tooltipRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   const [endTime, setEndTime] = useState("");
   const [toggling, setToggling] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [pendingImport, setPendingImport] = useState(null);
   const [endTimeError, setEndTimeError] = useState("");
   const isOpen = stats?.config?.selection_open;
 
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showTooltip &&
+        tooltipRef.current &&
+        !tooltipRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
+        setShowTooltip(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showTooltip]);
 
   //date for csv filename
   const today = new Date();
@@ -1764,17 +1786,34 @@ function SettingsTab({
     if (!file) return;
     setImporting(true);
     setImportResult(null);
+    setPendingImport(null);
     try {
       const result = await importStudents(file);
-      setImportResult(result);
-      toast.success(`Imported ${result.importedCount} students!`);
-      onRefresh();
+      if ((result.duplicateCount ?? 0) > 0) {
+        // Hold result — show warning panel instead of success
+        setPendingImport(result);
+      } else {
+        setImportResult(result);
+        toast.success(`Imported ${result.importedCount} students!`);
+        onRefresh();
+      }
     } catch (err) {
       toast.error(err.error || "Import failed.");
     } finally {
       setImporting(false);
       e.target.value = "";
     }
+  };
+
+  const handleCancelImport = () => {
+    setPendingImport(null);
+  };
+
+  const handleConfirmImport = () => {
+    setImportResult(pendingImport);
+    setPendingImport(null);
+    toast.success(`Imported ${pendingImport.importedCount} students!`);
+    onRefresh();
   };
 
   return (
@@ -1911,11 +1950,72 @@ function SettingsTab({
       </div>
 
       <div className="card p-5">
-        <h3 className="font-semibold text-slate-900 font-display mb-1">
-          Import Students
-        </h3>
+        <div className="relative">
+          <h3 className="font-semibold text-slate-900 font-display mb-1 inline-flex items-center gap-2">
+            Import Students
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={() => setShowTooltip(!showTooltip)}
+              className="text-slate-400 hover:text-slate-600 focus:outline-none">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 23 23"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          </h3>
+          {showTooltip && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              ref={tooltipRef}
+              className="absolute z-50 w-74 p-3 text-sm text-slate-700 bg-slate-50 rounded-lg shadow-lg border border-slate-200 top-full mt-2 left-0">
+              <p className="font-semibold mb-1">Accepted header formats:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>
+                  <span className="font-mono" style={{ fontWeight: "bold" }}>
+                    Student Name column:
+                  </span>{" "}
+                  <span>name, student, candidate</span>
+                </li>
+                <li>
+                  <span className="font-mono" style={{ fontWeight: "bold" }}>
+                    DOB column:
+                  </span>{" "}
+                  <span>dob, date, birth, born</span>
+                </li>
+                <li>
+                  <span className="font-mono" style={{ fontWeight: "bold" }}>
+                    RegNo/PIN column:
+                  </span>{" "}
+                  <span>pin, regno, roll, id, no</span>
+                </li>
+              </ul>
+            </motion.div>
+          )}
+        </div>
         <p className="text-sm text-slate-500 mb-4">
-          Upload an Excel (.xlsx) file with NAME , PIN and DOB columns.
+          Upload an Excel (.xlsx) file with name , regno and dob columns <br />
+          eg :{" "}
+          <span
+            style={{
+              backgroundColor: "#eff6ff",
+              color: "#1d4ed8",
+              borderRadius: "0.25rem",
+              padding: "0.125rem 0.25rem",
+              fontWeight: "bold",
+            }}>
+            | Name | PIN | DOB |
+          </span>
         </p>
         <label
           className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
@@ -1940,32 +2040,84 @@ function SettingsTab({
             disabled={importing}
           />
         </label>
-        {importResult && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm">
-            <p className="font-medium text-green-800">Import complete!</p>
-            <p className="text-green-600 mt-0.5">
-              ✓ {importResult.importedCount} imported ·{" "}
-              {importResult.skippedCount} skipped
-            </p>
-            {importResult.errors?.length > 0 && (
-              <details className="mt-2">
-                <summary className="text-xs text-green-700 cursor-pointer">
-                  View errors ({importResult.errors.length})
-                </summary>
-                <ul className="mt-1 space-y-0.5">
-                  {importResult.errors.map((e, i) => (
-                    <li key={i} className="text-xs text-red-600">
-                      {e}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {pendingImport && (
+            <motion.div
+              key="dup-warning"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-amber-800">
+                    Duplicate Records Detected
+                  </p>
+                  <p className="text-amber-700 mt-0.5">
+                    Found <strong>{pendingImport.duplicateCount}</strong>{" "}
+                    duplicate PIN(s) in the file.
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Only the last occurrence of each duplicate will be saved.
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    <button
+                      onClick={handleCancelImport}
+                      className="text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">
+                      Cancel Import
+                    </button>
+                    <button
+                      onClick={handleConfirmImport}
+                      className="text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 px-3 py-1.5 rounded-lg transition-colors">
+                      Ignore Duplicates &amp; Continue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {importResult && !pendingImport && (
+            <motion.div
+              key="import-success"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="mt-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm">
+              <p className="font-medium text-green-800">Import complete!</p>
+              <p className="text-green-600 mt-0.5">
+                ✓ {importResult.importedCount} imported ·{" "}
+                {importResult.skippedCount} skipped
+              </p>
+              {importResult.errors?.length > 0 && (
+                <details className="mt-2">
+                  <summary className="text-xs text-green-700 cursor-pointer">
+                    View errors ({importResult.errors.length})
+                  </summary>
+                  <ul className="mt-1 space-y-0.5">
+                    {importResult.errors.map((e, i) => (
+                      <li key={i} className="text-xs text-red-600">
+                        {e}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="card p-5">
