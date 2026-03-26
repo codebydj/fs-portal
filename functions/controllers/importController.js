@@ -91,6 +91,15 @@ async function processBuffer(buffer) {
   let currentBatch = db.batch();
   let batchCount = 0;
 
+  // Fetch existing PINs from Firestore to detect duplicates against the database
+  const existingStudentsSnap = await db
+    .collection("students")
+    .select("pin")
+    .get();
+  const existingPinsInDb = new Set(
+    existingStudentsSnap.docs.map((doc) => doc.id),
+  );
+
   const pinOccurrences = {}; // Initialize for duplicate detection
   for (let i = headerRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -117,7 +126,11 @@ async function processBuffer(buffer) {
       continue;
     }
 
-    // Increment occurrence count for valid PINs
+    // Track occurrences within the current file for in-file duplicates
+    // And also mark if the PIN already exists in the database
+    if (existingPinsInDb.has(rawPin)) {
+      pinOccurrences[rawPin] = (pinOccurrences[rawPin] || 0) + 1; // Treat as a duplicate if already in DB
+    }
     pinOccurrences[rawPin] = (pinOccurrences[rawPin] || 0) + 1;
 
     currentBatch.set(
@@ -144,10 +157,18 @@ async function processBuffer(buffer) {
 
   if (batchCount > 0) await currentBatch.commit();
 
-  // Calculate duplicate count from the collected occurrences of *valid* PINs
-  const duplicateCount = Object.values(pinOccurrences).filter(
-    (c) => c > 1,
-  ).length;
+  // Calculate duplicate count:
+  // This counts unique PINs that either appear more than once in the file
+  // OR already existed in the database (and thus had their occurrence count incremented).
+  const duplicateCount =
+    new Set(
+      Object.entries(pinOccurrences)
+        .filter(([, count]) => count > 1) // In-file duplicates
+        .map(([pin]) => pin),
+    ).size +
+    new Set(
+      Array.from(existingPinsInDb).filter((pin) => pinOccurrences[pin] === 1),
+    ).size; // PINs that were in the file once and also in the DB
   return { importedCount, skippedCount, errors, duplicateCount };
 }
 
