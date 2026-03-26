@@ -459,7 +459,10 @@ exports.importStudents = async (req, res) => {
     let currentBatch = db.batch();
     let batchCount = 0;
 
-    for (let i = 1; i < rows.length; i++) {
+    const pinOccurrences = {}; // Initialize for duplicate detection
+
+    for (let i = headerRowIndex + 1; i < rows.length; i++) {
+      // Start from the row after the header
       const row = rows[i];
       if (!row || row.every((c) => String(c).trim() === "")) continue;
 
@@ -484,6 +487,9 @@ exports.importStudents = async (req, res) => {
           );
         continue;
       }
+
+      // Increment occurrence count for valid PINs
+      pinOccurrences[rawPin] = (pinOccurrences[rawPin] || 0) + 1;
 
       const year = "20" + rawPin.substring(0, 2);
       const branch = rawPin.substring(5, 8);
@@ -517,6 +523,11 @@ exports.importStudents = async (req, res) => {
       await currentBatch.commit();
     }
 
+    // Calculate duplicate count from the collected occurrences of *valid* PINs
+    const duplicateCount = Object.values(pinOccurrences).filter(
+      (c) => c > 1,
+    ).length;
+
     console.log(
       `Import done: ${importedCount} imported, ${skippedCount} skipped`,
     );
@@ -525,6 +536,7 @@ exports.importStudents = async (req, res) => {
       success: true,
       importedCount,
       skippedCount,
+      duplicateCount, // Include duplicateCount in the response
       errors,
       message: `Successfully imported ${importedCount} students. Skipped ${skippedCount}.`,
     });

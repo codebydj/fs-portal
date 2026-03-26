@@ -48,11 +48,11 @@ async function processBuffer(buffer) {
   if (!rows || rows.length < 2) throw new Error("File has no data rows");
 
   const headerRowIndex = rows.findIndex((row) =>
-    row.some((cell) => cell && String(cell).trim() !== "")
+    row.some((cell) => cell && String(cell).trim() !== ""),
   );
 
   const headers = rows[headerRowIndex]?.map((h) =>
-    String(h).trim().toLowerCase()
+    String(h).trim().toLowerCase(),
   );
 
   if (!headers || headers.length === 0) {
@@ -65,18 +65,18 @@ async function processBuffer(buffer) {
       h.includes("regno") ||
       h.includes("roll") ||
       h.includes("id") ||
-      h.includes("no")
+      h.includes("no"),
   );
   const dobIdx = headers.findIndex(
     (h) =>
       h.includes("dob") ||
       h.includes("date") ||
       h.includes("birth") ||
-      h.includes("born")
+      h.includes("born"),
   );
   const nameIdx = headers.findIndex(
     (h) =>
-      h.includes("name") || h.includes("student") || h.includes("candidate")
+      h.includes("name") || h.includes("student") || h.includes("candidate"),
   );
 
   if (pinIdx === -1)
@@ -91,6 +91,7 @@ async function processBuffer(buffer) {
   let currentBatch = db.batch();
   let batchCount = 0;
 
+  const pinOccurrences = {}; // Initialize for duplicate detection
   for (let i = headerRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.every((c) => String(c).trim() === "")) continue;
@@ -111,10 +112,13 @@ async function processBuffer(buffer) {
       skippedCount++;
       if (errors.length < 20)
         errors.push(
-          `Row ${i + 1}: Cannot parse DOB "${row[dobIdx]}" for PIN ${rawPin}`
+          `Row ${i + 1}: Cannot parse DOB "${row[dobIdx]}" for PIN ${rawPin}`,
         );
       continue;
     }
+
+    // Increment occurrence count for valid PINs
+    pinOccurrences[rawPin] = (pinOccurrences[rawPin] || 0) + 1;
 
     currentBatch.set(
       db.collection("students").doc(rawPin),
@@ -126,7 +130,7 @@ async function processBuffer(buffer) {
         name: studentName,
         has_submitted: false,
       },
-      { merge: true }
+      { merge: true },
     );
 
     importedCount++;
@@ -140,20 +144,10 @@ async function processBuffer(buffer) {
 
   if (batchCount > 0) await currentBatch.commit();
 
-  const pinOccurrences = {};
-  for (let i = headerRowIndex + 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || row.every((c) => String(c).trim() === "")) continue;
-    const rawPin = String(row[pinIdx] || "")
-      .trim()
-      .toUpperCase();
-    if (rawPin) pinOccurrences[rawPin] = (pinOccurrences[rawPin] || 0) + 1;
-  }
-
+  // Calculate duplicate count from the collected occurrences of *valid* PINs
   const duplicateCount = Object.values(pinOccurrences).filter(
-    (c) => c > 1
+    (c) => c > 1,
   ).length;
-
   return { importedCount, skippedCount, errors, duplicateCount };
 }
 
@@ -196,7 +190,7 @@ exports.importStudents = (req, res) => {
     busboy.on("finish", async () => {
       console.log(
         "Busboy finish, total bytes:",
-        chunks.reduce((a, c) => a + c.length, 0)
+        chunks.reduce((a, c) => a + c.length, 0),
       );
 
       if (chunks.length === 0) {
