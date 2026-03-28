@@ -9,7 +9,7 @@ import { submitSelection } from "../../services/api";
 import StudentNavbar from "../../components/shared/StudentNavbar";
 import SubjectAccordionList from "../../components/student/SubjectAccordionList";
 import ConfirmModal from "../../components/shared/ConfirmModal";
-// import Footer from "../../components/shared/Footer";
+import Footer from "../../components/shared/Footer";
 
 function PreviousSelectionsView({ selections }) {
   const [enriched, setEnriched] = useState([]);
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
         loading={submitting}
       />
 
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 }
