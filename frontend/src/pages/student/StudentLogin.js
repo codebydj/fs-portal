@@ -73,10 +73,12 @@ export default function StudentLogin() {
   return (
     <div className="min-h-screen flex flex-col bg-blue-100">
       {/* Background pattern */}
-      <header className="border-b-2 h-9 flex justify-center bg-blue-700 border-blue-900 shadow-sm ">
+      <header className="border-b-2 flex justify-center bg-blue-700 border-blue-900 shadow-sm ">
         {/* Logo */}
-        <div className="flex items-center gap-3 flex-shrink-0 text-white">
-          <div>R.G.M COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+        <div className="flex flex-col items-center gap-1 flex-shrink-0 capitalize text-white py-4 font-sans">
+          <div className="font-bold text-2xl">Rajeev Gandhi Memorial </div>
+          <div className="text-sm "> College of Engineering & Technology</div>
+          <div className="text-sm ">(AUTONOMOUS)</div>
         </div>
       </header>
       <div className="flex-grow flex items-center justify-center p-4 relative z-10">
