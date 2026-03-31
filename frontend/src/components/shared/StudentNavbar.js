@@ -17,20 +17,13 @@ export default function StudentNavbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 14l9-5-9-5-9 5 9 5zm0 0v6"
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl ">
+              <img
+                src="/logo.png"
+                alt="clg logo"
+                style={{ borderRadius: 10 }}
               />
-            </svg>
-          </div>
+            </div>
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 font-display leading-tight">
               Faculty Portal

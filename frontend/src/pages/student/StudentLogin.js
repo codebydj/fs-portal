@@ -71,13 +71,14 @@ export default function StudentLogin() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="min-h-screen flex flex-col bg-blue-100">
       {/* Background pattern */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-100 rounded-full opacity-40 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-100 rounded-full opacity-40 blur-3xl" />
-      </div>
-
+      <header className="border-b-2 h-9 flex justify-center bg-blue-700 border-blue-900 shadow-sm ">
+        {/* Logo */}
+        <div className="flex items-center gap-3 flex-shrink-0 text-white">
+          <div>R.G.M COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+        </div>
+      </header>
       <div className="flex-grow flex items-center justify-center p-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -86,25 +87,8 @@ export default function StudentLogin() {
           className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-600 rounded-2xl mb-4 shadow-lg">
-              <svg
-                className="w-7 h-7 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 14l9-5-9-5-9 5 9 5z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
-                />
-              </svg>
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl">
+              <img src="/logo.png" alt="clg logo" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 font-display">
               Faculty Selection Portal
@@ -142,7 +126,8 @@ export default function StudentLogin() {
                   inputMode="numeric"
                 />
                 <p className="text-sm text-slate-400 mt-2">
-                   Note: "/" is automatically inserted as you type. Do not enter it manually.
+                  Note: "/" is automatically inserted as you type. Do not enter
+                  it manually.
                 </p>
               </div>
 
