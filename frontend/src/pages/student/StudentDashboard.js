@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { db } from "../../services/firebase";
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import * as htmlToImage from "html-to-image";
 import { useAuth } from "../../context/AuthContext";
 import { useCountdown } from "../../hooks/useCountdown";
 import { submitSelection } from "../../services/api";
@@ -11,7 +12,7 @@ import SubjectAccordionList from "../../components/student/SubjectAccordionList"
 import ConfirmModal from "../../components/shared/ConfirmModal";
 import Footer from "../../components/shared/Footer";
 
-function PreviousSelectionsView({ selections }) {
+const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
   const [enriched, setEnriched] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,8 +63,16 @@ function PreviousSelectionsView({ selections }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card overflow-hidden mt-6">
-      <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+      className="card overflow-hidden mt-6"
+      ref={ref}>
+      <div className="p-6 bg-white">
+        <h2 className="text-2xl font-bold text-slate-900 font-display">
+          {user?.name}
+        </h2>
+        <p className="text-sm text-slate-600 font-mono">{user?.pin}</p>
+        
+      </div>
+      <div className="px-5 py-4 border-t border-b border-slate-100 bg-slate-50">
         <h3 className="font-semibold text-slate-900 font-display text-sm">
           Your Faculty Selections
         </h3>
@@ -84,7 +93,10 @@ function PreviousSelectionsView({ selections }) {
         </thead>
         <tbody>
           {enriched.map((row, i) => (
-            <tr key={i} className="border-b border-slate-100 last:border-0">
+            <tr
+              key={i}
+              className={`border-b border-slate-100 last:border-0 ${i % 2 !== 1 ? "bg-[#eeeeee]" : ""}`}
+            >
               <td className="px-5 py-3 font-medium text-slate-800">
                 {row.subject.name}
               </td>
@@ -112,7 +124,7 @@ function PreviousSelectionsView({ selections }) {
       </table>
     </motion.div>
   );
-}
+});
 
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
@@ -124,6 +136,8 @@ export default function StudentDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [previousSelections, setPreviousSelections] = useState(null);
+  const selectionsRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
 
   const isSubmitted = user?.has_submitted;
   // Wait for config to load before deciding if selection is closed
@@ -196,6 +210,54 @@ export default function StudentDashboard() {
       setShowConfirm(false);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDownloadJpg = async () => {
+    if (!selectionsRef.current) {
+      toast.error("Could not find content to download.");
+      return;
+    }
+    setDownloading(true);
+
+    const element = selectionsRef.current;
+    // Store original styles to revert them later
+    const originalOverflow = element.style.overflow;
+    const originalMaxHeight = element.style.maxHeight;
+    const originalHeight = element.style.height;
+    const originalPaddingBottom = element.style.paddingBottom; // Store original padding
+
+    try {
+      // Temporarily remove overflow and set height to auto to capture full content
+      element.style.overflow = "visible";
+      element.style.maxHeight = "none";
+      element.style.height = "auto"; // Ensure height adjusts to content
+      element.style.paddingBottom = '50px'; // Add extra space at the bottom
+
+      // Add a small delay to allow DOM to re-render with new styles
+      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+
+      const dataUrl = await htmlToImage.toJpeg(element, {
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+      });
+      const link = document.createElement("a");
+      link.download = `faculty-selections-${user.pin}.jpg`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Downloaded selections as JPG!");
+    } catch (error) {
+      console.error("Download failed", error);
+      toast.error("Failed to download image.");
+    } finally {
+      // Revert styles to their original state
+      element.style.overflow = originalOverflow;
+      element.style.maxHeight = originalMaxHeight;
+      element.style.height = originalHeight;
+      element.style.paddingBottom = originalPaddingBottom; // Revert padding
+      setDownloading(false);
     }
   };
 
@@ -282,7 +344,42 @@ export default function StudentDashboard() {
 
         {/* Previous selections table for submitted students */}
         {isSubmitted && previousSelections && previousSelections.length > 0 && (
-          <PreviousSelectionsView selections={previousSelections} />
+          <>
+            <PreviousSelectionsView
+              selections={previousSelections}
+              user={user}
+              ref={selectionsRef}
+            />
+            <div className="mt-2 mb-2 flex justify-end ">
+              <button
+                onClick={handleDownloadJpg}
+                disabled={downloading}
+                className="btn-secondary flex items-center gap-2 w-fit bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+                {downloading ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    Download as JPG
+                  </>
+                )}
+              </button>
+            </div>
+          </>
         )}
 
         {/* Selection closed message */}
@@ -358,40 +455,41 @@ export default function StudentDashboard() {
         )}
 
         {/* Subjects list */}
-        {subjects.length === 0 ? (
-          <div className="card px-6 py-12 text-center">
-            <svg
-              className="w-12 h-12 text-slate-300 mx-auto mb-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        {!isSubmitted &&
+          (subjects.length === 0 ? (
+            <div className="card px-6 py-12 text-center">
+              <svg
+                className="w-12 h-12 text-slate-300 mx-auto mb-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
+              <p className="text-slate-500 font-medium">
+                No subjects available yet.
+              </p>
+              <p className="text-slate-400 text-sm mt-1">
+                Please check back later.
+              </p>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}>
+              <SubjectAccordionList
+                subjects={subjects}
+                selections={selections}
+                onSelect={handleSelect}
+                disabled={isSubmitted || isSelectionClosed}
               />
-            </svg>
-            <p className="text-slate-500 font-medium">
-              No subjects available yet.
-            </p>
-            <p className="text-slate-400 text-sm mt-1">
-              Please check back later.
-            </p>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}>
-            <SubjectAccordionList
-              subjects={subjects}
-              selections={selections}
-              onSelect={handleSelect}
-              disabled={isSubmitted || isSelectionClosed}
-            />
-          </motion.div>
-        )}
+            </motion.div>
+          ))}
 
         {/* Submit button */}
         {!isSubmitted && (
