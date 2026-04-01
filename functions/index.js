@@ -70,6 +70,7 @@ const {
   resetAllFaculty,
   resetStudents,
   getStats,
+  resetFacultyByGroup,
   getStudents,
   deleteStudent,
   getFacultyStudents,
@@ -109,6 +110,7 @@ app.post("/admin/reset-selections", verifyAdmin, resetSelections);
 app.post("/admin/reset-subjects", verifyAdmin, resetAllSubjects);
 app.post("/admin/reset-faculty", verifyAdmin, resetAllFaculty);
 app.post("/admin/reset-students", verifyAdmin, resetStudents);
+app.post("/admin/reset-faculty-by-group", verifyAdmin, resetFacultyByGroup);
 
 // Admin — Students view
 app.get("/admin/students", verifyAdmin, getStudents);

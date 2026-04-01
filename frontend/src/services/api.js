@@ -133,6 +133,13 @@ export const exportFacultySelectionsWithStudentsCSV = () => {
   ).then((res) => res.blob());
 };
 
+// Admin - Reset Faculty by Group
+export const resetFacultyByGroup = (group) =>
+  request("/admin/reset-faculty-by-group", {
+    method: "POST",
+    body: JSON.stringify({ group }),
+  });
+
 export const exportStudentWiseGroupA = () => {
   const token = getToken();
   return fetch(`${BASE_URL}/admin/export-student-wise-group-a`, {

@@ -138,6 +138,32 @@ exports.deleteFaculty = async (req, res) => {
   }
 };
 
+// ── Reset All Faculty by Group ────────────────────────────────
+exports.resetFacultyByGroup = async (req, res) => {
+  try {
+    const { group } = req.body;
+    if (!group || (group !== "A" && group !== "B")) {
+      return res.status(400).json({
+        error: "Group must be A or B",
+        code: "INVALID_REQUEST",
+      });
+    }
+
+    const facultySnap = await db.collection("faculty").where("group", "==", group).get();
+    const batch = db.batch();
+    facultySnap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    return res
+      .status(200)
+      .json({ success: true, message: `All faculty for Group ${group} deleted` });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
 // ── Settings ─────────────────────────────────────────────────
 exports.toggleSelection = async (req, res) => {
   try {

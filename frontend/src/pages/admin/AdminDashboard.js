@@ -32,6 +32,7 @@ import {
   importStudents,
   exportStudentWiseGroupA,
   exportStudentWiseGroupB,
+  resetFacultyByGroup,
   exportFacultyWiseGroupA,
   exportFacultyWiseGroupB,
 } from "../../services/api";
@@ -605,7 +606,54 @@ function DashboardTab({ stats, error }) {
   );
 }
 
-// ── Subjects Tab ──────────────────────────────────────────────
+// ── Sort Icon Component ───────────────────────────────────────
+const SortIcon = ({ column, sortKey, sortDir }) => {
+  if (sortKey !== column) {
+    return (
+      <svg
+        className="w-3.5 h-3.5 text-slate-300 ml-1 inline"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+        />
+      </svg>
+    );
+  }
+  return sortDir === "asc" ? (
+    <svg
+      className="w-3.5 h-3.5 text-primary-600 ml-1 inline"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 15l7-7 7 7"
+      />
+    </svg>
+  ) : (
+    <svg
+      className="w-3.5 h-3.5 text-primary-600 ml-1 inline"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 9l-7 7-7-7"
+      />
+    </svg>
+  );
+};
+
+// ── Subjects Tab (Corrected) ──────────────────────────────────
 function SubjectsTab({ stats, onRefresh }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -618,6 +666,32 @@ function SubjectsTab({ stats, onRefresh }) {
   const [editLoading, setEditLoading] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [sortKey, setSortKey] = useState("name"); // Default sort key
+  const [sortDir, setSortDir] = useState("asc"); // Default sort direction
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedSubjects = useMemo(() => {
+    if (!stats?.subjects) return [];
+    const sortable = [...stats.subjects];
+    sortable.sort((a, b) => {
+      let aVal = a[sortKey] ?? "";
+      let bVal = b[sortKey] ?? "";
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sortable;
+  }, [stats?.subjects, sortKey, sortDir]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -754,11 +828,29 @@ function SubjectsTab({ stats, onRefresh }) {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                  Name
+                <th
+                  className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                  onClick={() => handleSort("name")}>
+                  <span className="flex items-center gap-1">
+                    Name
+                    <SortIcon
+                      column="name"
+                      sortKey={sortKey}
+                      sortDir={sortDir}
+                    />
+                  </span>
                 </th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                  Code
+                <th
+                  className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                  onClick={() => handleSort("code")}>
+                  <span className="flex items-center gap-1">
+                    Code
+                    <SortIcon
+                      column="code"
+                      sortKey={sortKey}
+                      sortDir={sortDir}
+                    />
+                  </span>
                 </th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
                   Actions
@@ -766,7 +858,7 @@ function SubjectsTab({ stats, onRefresh }) {
               </tr>
             </thead>
             <tbody>
-              {stats.subjects.map((s) => (
+              {sortedSubjects.map((s) => (
                 <tr
                   key={s.id}
                   className="border-b border-slate-100 hover:bg-slate-50">
@@ -803,12 +895,12 @@ function SubjectsTab({ stats, onRefresh }) {
                         <button
                           onClick={() => handleEdit(s.id)}
                           disabled={editLoading}
-                          className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded transition-colors font-medium">
+                          className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
                           {editLoading ? "Saving..." : "Save"}
                         </button>
                         <button
                           onClick={cancelEdit}
-                          className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded transition-colors">
+                          className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
                           Cancel
                         </button>
                       </div>
@@ -816,12 +908,12 @@ function SubjectsTab({ stats, onRefresh }) {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => startEdit(s)}
-                          className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded transition-colors">
+                          className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
                           Edit
                         </button>
                         <button
                           onClick={() => setDeleteId(s.id)}
-                          className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                          className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
                           Delete
                         </button>
                       </div>
@@ -858,7 +950,7 @@ function SubjectsTab({ stats, onRefresh }) {
   );
 }
 
-// ── Faculty Tab ───────────────────────────────────────────────
+// ── Faculty Tab (Corrected) ───────────────────────────────────
 function FacultyTab({ stats, onRefresh }) {
   // CHANGE 1: Removed "experience" from initial form state
   const [form, setForm] = useState({
@@ -873,10 +965,27 @@ function FacultyTab({ stats, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editLoading, setEditLoading] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetting, setResetting] = useState(false);
+  const [showResetAllConfirm, setShowResetAllConfirm] = useState(false); // For all faculty
+  const [resettingAll, setResettingAll] = useState(false);
+  const [showResetGroupAConfirm, setShowResetGroupAConfirm] = useState(false); // For Group A faculty
+  const [resettingGroupA, setResettingGroupA] = useState(false);
+  const [showResetGroupBConfirm, setShowResetGroupBConfirm] = useState(false); // For Group B faculty
+  const [resettingGroupB, setResettingGroupB] = useState(false);
+
   const [filterSubject, setFilterSubject] = useState("");
-  const [filterGroup, setFilterGroup] = useState(""); //date for csv filename
+  const [filterGroup, setFilterGroup] = useState("");
+
+  const [sortKey, setSortKey] = useState("name"); // Default sort key
+  const [sortDir, setSortDir] = useState("asc"); // Default sort direction
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -947,24 +1056,80 @@ function FacultyTab({ stats, onRefresh }) {
     }
   };
 
-  const handleResetAll = async () => {
-    setResetting(true);
+  const handleResetAllFaculty = async () => {
+    setResettingAll(true);
     try {
       await resetAllFaculty();
       toast.success("All faculty deleted.");
-      setShowResetConfirm(false);
+      setShowResetAllConfirm(false);
       onRefresh();
     } catch (err) {
-      toast.error(err.error || "Failed to reset");
+      toast.error(err.error || "Failed to reset all faculty");
     } finally {
-      setResetting(false);
+      setResettingAll(false);
     }
   };
 
-  const facultyA = (stats?.faculty || [])
+  const handleResetGroupAFaculty = async () => {
+    setResettingGroupA(true);
+    try {
+      await resetFacultyByGroup("A");
+      toast.success("All faculty for Group A deleted.");
+      setShowResetGroupAConfirm(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.error || "Failed to reset Group A faculty");
+    } finally {
+      setResettingGroupA(false);
+    }
+  };
+
+  const handleResetGroupBFaculty = async () => {
+    setResettingGroupB(true);
+    try {
+      await resetFacultyByGroup("B");
+      toast.success("All faculty for Group B deleted.");
+      setShowResetGroupBConfirm(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.error || "Failed to reset Group B faculty");
+    } finally {
+      setResettingGroupB(false);
+    }
+  };
+
+  const sortedFaculty = useMemo(() => {
+    if (!stats?.faculty) return [];
+    const sortable = [...stats.faculty];
+    sortable.sort((a, b) => {
+      let aVal = a[sortKey] ?? "";
+      let bVal = b[sortKey] ?? "";
+
+      // Custom sort for 'Seats' (max_limit)
+      if (sortKey === "seats") {
+        aVal = a.max_limit;
+        bVal = b.max_limit;
+      } else if (sortKey === "subject") {
+        const subjectA = stats.subjects?.find((s) => s.id === a.subject_id);
+        const subjectB = stats.subjects?.find((s) => s.id === b.subject_id);
+        aVal = subjectA?.name || "";
+        bVal = subjectB?.name || "";
+      }
+
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sortable;
+  }, [stats?.faculty, stats?.subjects, sortKey, sortDir]);
+
+  const facultyA = sortedFaculty
     .filter((f) => f.group === "A")
     .filter((f) => !filterSubject || f.subject_id === filterSubject);
-  const facultyB = (stats?.faculty || [])
+  const facultyB = sortedFaculty
     .filter((f) => f.group === "B")
     .filter((f) => !filterSubject || f.subject_id === filterSubject);
 
@@ -1078,6 +1243,24 @@ function FacultyTab({ stats, onRefresh }) {
             <h3 className="font-semibold text-slate-900 font-display">
               Group A Faculty ({facultyA.length})
             </h3>
+            <div className="flex items-center gap-2">
+              <DownloadCSVButton
+                label="Download CSV"
+                onClick={() =>
+                  downloadBlob(
+                    exportFacultyWiseGroupA(),
+                    `faculty_group_a_${Date.now()}.csv`,
+                  )
+                }
+              />
+              {facultyA.length > 0 && (
+                <button
+                  onClick={() => setShowResetGroupAConfirm(true)}
+                  className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                  Delete All Group A Faculty
+                </button>
+              )}
+            </div>
           </div>
           {!facultyA.length ? (
             <div className="py-10 text-center text-slate-400 text-sm">
@@ -1088,13 +1271,45 @@ function FacultyTab({ stats, onRefresh }) {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {["Name", "Subject", "Seats", "Actions"].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("name")}>
+                      <span className="flex items-center gap-1">
+                        Name
+                        <SortIcon
+                          column="name"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("subject")}>
+                      <span className="flex items-center gap-1">
+                        Subject
+                        <SortIcon
+                          column="subject"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("seats")}>
+                      <span className="flex items-center gap-1">
+                        Seats
+                        <SortIcon
+                          column="seats"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1217,6 +1432,24 @@ function FacultyTab({ stats, onRefresh }) {
             <h3 className="font-semibold text-slate-900 font-display">
               Group B Faculty ({facultyB.length})
             </h3>
+            <div className="flex items-center gap-2">
+              <DownloadCSVButton
+                label="Download CSV"
+                onClick={() =>
+                  downloadBlob(
+                    exportFacultyWiseGroupB(),
+                    `faculty_group_b_${Date.now()}.csv`,
+                  )
+                }
+              />
+              {facultyB.length > 0 && (
+                <button
+                  onClick={() => setShowResetGroupBConfirm(true)}
+                  className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                  Delete All Group B Faculty
+                </button>
+              )}
+            </div>
           </div>
           {!facultyB.length ? (
             <div className="py-10 text-center text-slate-400 text-sm">
@@ -1227,13 +1460,45 @@ function FacultyTab({ stats, onRefresh }) {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    {["Name", "Subject", "Seats", "Actions"].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("name")}>
+                      <span className="flex items-center gap-1">
+                        Name
+                        <SortIcon
+                          column="name"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("subject")}>
+                      <span className="flex items-center gap-1">
+                        Subject
+                        <SortIcon
+                          column="subject"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                      onClick={() => handleSort("seats")}>
+                      <span className="flex items-center gap-1">
+                        Seats
+                        <SortIcon
+                          column="seats"
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1357,65 +1622,40 @@ function FacultyTab({ stats, onRefresh }) {
         loading={deleting}
       />
       <ConfirmModal
-        open={showResetConfirm}
+        open={showResetAllConfirm}
         title="Reset All Faculty?"
         message="This will permanently delete ALL faculty members. This cannot be undone."
         danger
         confirmText="Delete All Faculty"
-        onConfirm={handleResetAll}
-        onCancel={() => setShowResetConfirm(false)}
-        loading={resetting}
+        onConfirm={handleResetAllFaculty}
+        onCancel={() => setShowResetAllConfirm(false)}
+        loading={resettingAll}
+      />
+      <ConfirmModal
+        open={showResetGroupAConfirm}
+        title="Delete All Group A Faculty?"
+        message="This will permanently delete ALL faculty members for Group A. This cannot be undone."
+        danger
+        confirmText="Delete Group A Faculty"
+        onConfirm={handleResetGroupAFaculty}
+        onCancel={() => setShowResetGroupAConfirm(false)}
+        loading={resettingGroupA}
+      />
+      <ConfirmModal
+        open={showResetGroupBConfirm}
+        title="Delete All Group B Faculty?"
+        message="This will permanently delete ALL faculty members for Group B. This cannot be undone."
+        danger
+        confirmText="Delete Group B Faculty"
+        onConfirm={handleResetGroupBFaculty}
+        onCancel={() => setShowResetGroupBConfirm(false)}
+        loading={resettingGroupB}
       />
     </div>
   );
 }
 
 // ── Students Tab ──────────────────────────────────────────────
-function SortIcon({ column, sortKey, sortDir }) {
-  if (sortKey !== column)
-    return (
-      <svg
-        className="w-3.5 h-3.5 text-slate-300 ml-1 inline"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-        />
-      </svg>
-    );
-  return sortDir === "asc" ? (
-    <svg
-      className="w-3.5 h-3.5 text-primary-600 ml-1 inline"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M5 15l7-7 7 7"
-      />
-    </svg>
-  ) : (
-    <svg
-      className="w-3.5 h-3.5 text-primary-600 ml-1 inline"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 9l-7 7-7-7"
-      />
-    </svg>
-  );
-}
-
 function StudentsTab({ onRefresh, refreshTrigger }) {
   const [view, setView] = useState("all");
   const [students, setStudents] = useState([]);
@@ -1631,7 +1871,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
             </div>
           </div>
         </div>
-
+        {/* Removed the !sorted.length check here to allow group-specific empty states */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-6 h-6 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -1650,20 +1890,26 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <p className="text-slate-400 text-sm">No students found.</p>
+            <p className="text-slate-400 text-sm">
+              No students found in any group.
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Group A Students Table */}
-            {studentsA.length > 0 && (
-              <div
-                className="card overflow-hidden"
-                key={`students-a-${studentsA.length}`}>
-                <div className="px-5 py-4 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-900 font-display">
-                    Group A Students ({studentsA.length})
-                  </h3>
+            <div
+              className="card overflow-hidden"
+              key={`students-a-${studentsA.length}`}>
+              <div className="px-5 py-4 border-b border-slate-200">
+                <h3 className="font-semibold text-slate-900 font-display">
+                  Group A Students ({studentsA.length})
+                </h3>
+              </div>
+              {studentsA.length === 0 ? (
+                <div className="py-10 text-center text-slate-400 text-sm">
+                  No students found for Group A.
                 </div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b border-slate-200">
@@ -1737,19 +1983,23 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Group B Students Table */}
-            {studentsB.length > 0 && (
-              <div
-                className="card overflow-hidden"
-                key={`students-b-${studentsB.length}`}>
-                <div className="px-5 py-4 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-900 font-display">
-                    Group B Students ({studentsB.length})
-                  </h3>
+            <div
+              className="card overflow-hidden"
+              key={`students-b-${studentsB.length}`}>
+              <div className="px-5 py-4 border-b border-slate-200">
+                <h3 className="font-semibold text-slate-900 font-display">
+                  Group B Students ({studentsB.length})
+                </h3>
+              </div>
+              {studentsB.length === 0 ? (
+                <div className="py-10 text-center text-slate-400 text-sm">
+                  No students found for Group B.
                 </div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b border-slate-200">
@@ -1823,8 +2073,8 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
