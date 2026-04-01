@@ -32,8 +32,6 @@ import {
   importStudents,
   exportStudentWiseGroupA,
   exportStudentWiseGroupB,
-  exportFacultyListGroupA, // New import for faculty list export
-  exportFacultyListGroupB, // New import for faculty list export
   resetFacultyByGroup,
   exportFacultyWiseGroupA,
   exportFacultyWiseGroupB,
