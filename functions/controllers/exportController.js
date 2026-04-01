@@ -35,12 +35,12 @@ exports.exportCSV = async (req, res) => {
       id: d.id,
       ...d.data(),
     }));
-    const header = ["PIN", "Name", ...subjectList.map((s) => s.name)];
+    const header = ["PIN", "Name", "Group", ...subjectList.map((s) => s.name)];
     const rows = [header];
 
     Object.entries(byPin).forEach(([pin, subjectMap]) => {
       const student = students[pin] || {};
-      const row = [pin, student.name || ""];
+      const row = [pin, student.name || "", student.group || ""];
       subjectList.forEach((sub) => {
         const facId = subjectMap[sub.id];
         const fac = facId ? faculty[facId] : null;
@@ -77,8 +77,8 @@ exports.exportSubmitted = async (req, res) => {
       .map((d) => d.data())
       .filter((s) => s.has_submitted);
 
-    const rows = [["PIN", "Status"]];
-    submitted.forEach((s) => rows.push([s.pin, "Submitted"]));
+    const rows = [["PIN", "Status", "Group"]];
+    submitted.forEach((s) => rows.push([s.pin, "Submitted", s.group || ""]));
 
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     res.setHeader("Content-Type", "text/csv");
@@ -179,6 +179,7 @@ exports.exportFacultyCSV = async (req, res) => {
           name: student.name || "",
           pin: sel.pin || "",
           branch: student.branch || "",
+          group: student.group || "",
         });
       }
     });
@@ -198,16 +199,17 @@ exports.exportFacultyCSV = async (req, res) => {
       csvRows.push(
         `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
       );
+      csvRows.push(`"Group: ${String(f.group || "").replace(/"/g, '""')}"`);
       csvRows.push("");
 
       // Column headers
-      csvRows.push('"S.No","Student Name","PIN","Branch"');
+      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
 
       // Data rows
       if (selectedStudents.length > 0) {
         selectedStudents.forEach((student, i) => {
           csvRows.push(
-            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}"`,
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
           );
         });
       } else {
@@ -276,6 +278,8 @@ exports.exportFacultySelectionsWithStudentsCSV = async (req, res) => {
         "Student Name",
         "Student PIN",
         "Student Branch",
+        "Student Group",
+        "Faculty Group",
         "Selection Time",
       ],
     ];
@@ -297,6 +301,8 @@ exports.exportFacultySelectionsWithStudentsCSV = async (req, res) => {
           student.name || "",
           student.pin || "",
           student.branch || "",
+          student.group || "",
+          f.group || "",
           selection.timestamp?.toDate
             ? new Date(selection.timestamp.toDate()).toLocaleTimeString(
                 "en-IN",
@@ -321,6 +327,8 @@ exports.exportFacultySelectionsWithStudentsCSV = async (req, res) => {
           "",
           "",
           "",
+          "",
+          f.group || "",
           "",
         ]);
       }
@@ -347,7 +355,7 @@ exports.exportFacultySelectionsWithStudentsCSV = async (req, res) => {
 exports.exportStudentsCSV = async (req, res) => {
   try {
     const studentsSnap = await db.collection("students").get();
-    const rows = [["Name", "PIN", "Branch", "Year", "Status"]];
+    const rows = [["Name", "PIN", "Branch", "Year", "Group", "Status"]];
     studentsSnap.docs.forEach((d) => {
       const s = d.data();
       rows.push([
@@ -355,6 +363,7 @@ exports.exportStudentsCSV = async (req, res) => {
         s.pin,
         s.branch || "",
         s.year || "",
+        s.group || "",
         s.has_submitted ? "Submitted" : "Pending",
       ]);
     });
@@ -370,6 +379,374 @@ exports.exportStudentsCSV = async (req, res) => {
     return res.status(200).send(csv);
   } catch (err) {
     console.error(err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
+// ── Group-specific exports ───────────────────────────────────
+
+// Export student-wise CSV for Group A
+exports.exportStudentWiseGroupA = async (req, res) => {
+  try {
+    const [selectionsSnap, studentsSnap, subjectsSnap, facultySnap] =
+      await Promise.all([
+        db.collection("selections").get(),
+        db.collection("students").get(),
+        db.collection("subjects").get(),
+        db.collection("faculty").get(),
+      ]);
+
+    const students = {};
+    studentsSnap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.group === "A") {
+        students[d.id] = data;
+      }
+    });
+
+    const subjects = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjects[d.id] = d.data();
+    });
+
+    const faculty = {};
+    facultySnap.docs.forEach((d) => {
+      faculty[d.id] = d.data();
+    });
+
+    const byPin = {};
+    selectionsSnap.docs.forEach((d) => {
+      const sel = d.data();
+      // Only include selections from Group A students
+      if (students[sel.pin]) {
+        if (!byPin[sel.pin]) byPin[sel.pin] = {};
+        byPin[sel.pin][sel.subject_id] = sel.faculty_id;
+      }
+    });
+
+    const subjectList = subjectsSnap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+    const header = ["PIN", "Name", "Group", ...subjectList.map((s) => s.name)];
+    const rows = [header];
+
+    Object.entries(byPin).forEach(([pin, subjectMap]) => {
+      const student = students[pin] || {};
+      const row = [pin, student.name || "", student.group || ""];
+      subjectList.forEach((sub) => {
+        const facId = subjectMap[sub.id];
+        const fac = facId ? faculty[facId] : null;
+        row.push(fac ? fac.name : "");
+      });
+      rows.push(row);
+    });
+
+    const csvContent = rows
+      .map((r) =>
+        r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="faculty_selections_group_a_${Date.now()}.csv"`,
+    );
+    return res.status(200).send(csvContent);
+  } catch (err) {
+    console.error("exportStudentWiseGroupA error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
+// Export student-wise CSV for Group B
+exports.exportStudentWiseGroupB = async (req, res) => {
+  try {
+    const [selectionsSnap, studentsSnap, subjectsSnap, facultySnap] =
+      await Promise.all([
+        db.collection("selections").get(),
+        db.collection("students").get(),
+        db.collection("subjects").get(),
+        db.collection("faculty").get(),
+      ]);
+
+    const students = {};
+    studentsSnap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.group === "B") {
+        students[d.id] = data;
+      }
+    });
+
+    const subjects = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjects[d.id] = d.data();
+    });
+
+    const faculty = {};
+    facultySnap.docs.forEach((d) => {
+      faculty[d.id] = d.data();
+    });
+
+    const byPin = {};
+    selectionsSnap.docs.forEach((d) => {
+      const sel = d.data();
+      // Only include selections from Group B students
+      if (students[sel.pin]) {
+        if (!byPin[sel.pin]) byPin[sel.pin] = {};
+        byPin[sel.pin][sel.subject_id] = sel.faculty_id;
+      }
+    });
+
+    const subjectList = subjectsSnap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+    const header = ["PIN", "Name", "Group", ...subjectList.map((s) => s.name)];
+    const rows = [header];
+
+    Object.entries(byPin).forEach(([pin, subjectMap]) => {
+      const student = students[pin] || {};
+      const row = [pin, student.name || "", student.group || ""];
+      subjectList.forEach((sub) => {
+        const facId = subjectMap[sub.id];
+        const fac = facId ? faculty[facId] : null;
+        row.push(fac ? fac.name : "");
+      });
+      rows.push(row);
+    });
+
+    const csvContent = rows
+      .map((r) =>
+        r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="faculty_selections_group_b_${Date.now()}.csv"`,
+    );
+    return res.status(200).send(csvContent);
+  } catch (err) {
+    console.error("exportStudentWiseGroupB error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
+// Export faculty-wise CSV for Group A
+exports.exportFacultyWiseGroupA = async (req, res) => {
+  try {
+    const [facultySnap, subjectsSnap, selectionsSnap, studentsSnap] =
+      await Promise.all([
+        db.collection("faculty").get(),
+        db.collection("subjects").get(),
+        db.collection("selections").get(),
+        db.collection("students").get(),
+      ]);
+
+    // Build lookup maps
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjectsMap[d.id] = d.data();
+    });
+
+    const studentsMap = {};
+    studentsSnap.docs.forEach((d) => {
+      studentsMap[d.id] = d.data();
+    });
+
+    // Group selections by faculty_id, dedup by PIN per faculty, only for Group A faculty
+    const facultySelections = {};
+    selectionsSnap.docs.forEach((d) => {
+      const sel = d.data();
+      if (!sel.faculty_id || !sel.pin) return;
+
+      // Check if faculty is in Group A
+      const facultyDoc = facultySnap.docs.find((f) => f.id === sel.faculty_id);
+      if (!facultyDoc || facultyDoc.data().group !== "A") return;
+
+      // Check if student is in Group A
+      const student = studentsMap[sel.pin];
+      if (!student || student.group !== "A") return;
+
+      if (!facultySelections[sel.faculty_id]) {
+        facultySelections[sel.faculty_id] = { seen: new Set(), list: [] };
+      }
+
+      if (!facultySelections[sel.faculty_id].seen.has(sel.pin)) {
+        facultySelections[sel.faculty_id].seen.add(sel.pin);
+        facultySelections[sel.faculty_id].list.push({
+          name: student.name || "",
+          pin: sel.pin || "",
+          branch: student.branch || "",
+          group: student.group || "",
+        });
+      }
+    });
+
+    const csvRows = [];
+    const facultyDocs = facultySnap.docs.filter((d) => d.data().group === "A");
+
+    facultyDocs.forEach((d, index) => {
+      const f = d.data();
+      const sub = subjectsMap[f.subject_id] || {};
+      const selectedStudents = (facultySelections[d.id] || {}).list || [];
+
+      // Faculty + subject header
+      csvRows.push(
+        `"Faculty Name: ${String(f.name || "").replace(/"/g, '""')}"`,
+      );
+      csvRows.push(
+        `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
+      );
+      csvRows.push(`"Group: A"`);
+      csvRows.push("");
+
+      // Column headers
+      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
+
+      // Data rows
+      if (selectedStudents.length > 0) {
+        selectedStudents.forEach((student, i) => {
+          csvRows.push(
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
+          );
+        });
+      } else {
+        csvRows.push('"No students assigned"');
+      }
+
+      // Separator between blocks (skip after last)
+      if (index < facultyDocs.length - 1) {
+        csvRows.push("");
+        csvRows.push('"---"');
+        csvRows.push("");
+      }
+    });
+
+    const csv = csvRows.join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="faculty_wise_group_a.csv"',
+    );
+    return res.status(200).send(csv);
+  } catch (err) {
+    console.error("exportFacultyWiseGroupA error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
+// Export faculty-wise CSV for Group B
+exports.exportFacultyWiseGroupB = async (req, res) => {
+  try {
+    const [facultySnap, subjectsSnap, selectionsSnap, studentsSnap] =
+      await Promise.all([
+        db.collection("faculty").get(),
+        db.collection("subjects").get(),
+        db.collection("selections").get(),
+        db.collection("students").get(),
+      ]);
+
+    // Build lookup maps
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjectsMap[d.id] = d.data();
+    });
+
+    const studentsMap = {};
+    studentsSnap.docs.forEach((d) => {
+      studentsMap[d.id] = d.data();
+    });
+
+    // Group selections by faculty_id, dedup by PIN per faculty, only for Group B faculty
+    const facultySelections = {};
+    selectionsSnap.docs.forEach((d) => {
+      const sel = d.data();
+      if (!sel.faculty_id || !sel.pin) return;
+
+      // Check if faculty is in Group B
+      const facultyDoc = facultySnap.docs.find((f) => f.id === sel.faculty_id);
+      if (!facultyDoc || facultyDoc.data().group !== "B") return;
+
+      // Check if student is in Group B
+      const student = studentsMap[sel.pin];
+      if (!student || student.group !== "B") return;
+
+      if (!facultySelections[sel.faculty_id]) {
+        facultySelections[sel.faculty_id] = { seen: new Set(), list: [] };
+      }
+
+      if (!facultySelections[sel.faculty_id].seen.has(sel.pin)) {
+        facultySelections[sel.faculty_id].seen.add(sel.pin);
+        facultySelections[sel.faculty_id].list.push({
+          name: student.name || "",
+          pin: sel.pin || "",
+          branch: student.branch || "",
+          group: student.group || "",
+        });
+      }
+    });
+
+    const csvRows = [];
+    const facultyDocs = facultySnap.docs.filter((d) => d.data().group === "B");
+
+    facultyDocs.forEach((d, index) => {
+      const f = d.data();
+      const sub = subjectsMap[f.subject_id] || {};
+      const selectedStudents = (facultySelections[d.id] || {}).list || [];
+
+      // Faculty + subject header
+      csvRows.push(
+        `"Faculty Name: ${String(f.name || "").replace(/"/g, '""')}"`,
+      );
+      csvRows.push(
+        `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
+      );
+      csvRows.push(`"Group: B"`);
+      csvRows.push("");
+
+      // Column headers
+      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
+
+      // Data rows
+      if (selectedStudents.length > 0) {
+        selectedStudents.forEach((student, i) => {
+          csvRows.push(
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
+          );
+        });
+      } else {
+        csvRows.push('"No students assigned"');
+      }
+
+      // Separator between blocks (skip after last)
+      if (index < facultyDocs.length - 1) {
+        csvRows.push("");
+        csvRows.push('"---"');
+        csvRows.push("");
+      }
+    });
+
+    const csv = csvRows.join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="faculty_wise_group_b.csv"',
+    );
+    return res.status(200).send(csv);
+  } catch (err) {
+    console.error("exportFacultyWiseGroupB error:", err);
     return res
       .status(500)
       .json({ error: "Server error", code: "SERVER_ERROR" });

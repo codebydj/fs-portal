@@ -69,10 +69,17 @@ exports.deleteSubject = async (req, res) => {
 // ── Faculty ──────────────────────────────────────────────────
 exports.addFaculty = async (req, res) => {
   try {
-    const { name, subject_id, experience, max_limit } = req.body;
-    if (!name || !subject_id || !max_limit) {
+    const { name, subject_id, experience, max_limit, group } = req.body;
+    if (!name || !subject_id || !max_limit || !group) {
       return res.status(400).json({
-        error: "Name, subject_id and max_limit required",
+        error: "Name, subject_id, max_limit and group required",
+        code: "INVALID_REQUEST",
+      });
+    }
+
+    if (group !== "A" && group !== "B") {
+      return res.status(400).json({
+        error: "Group must be A or B",
         code: "INVALID_REQUEST",
       });
     }
@@ -88,11 +95,12 @@ exports.addFaculty = async (req, res) => {
     const existingSnap = await db
       .collection("faculty")
       .where("subject_id", "==", subject_id)
+      .where("group", "==", group)
       .get();
     for (const doc of existingSnap.docs) {
       if (doc.data().name.trim().toLowerCase() === trimmedName) {
         return res.status(409).json({
-          error: `Faculty "${name.trim()}" already exists for this subject`,
+          error: `Faculty "${name.trim()}" already exists for this subject and group`,
           code: "ALREADY_EXISTS",
         });
       }
@@ -103,11 +111,12 @@ exports.addFaculty = async (req, res) => {
       subject_id,
       experience: experience ? Number(experience) : null,
       max_limit: Number(max_limit),
+      group,
       current_count: 0,
     });
     return res
       .status(201)
-      .json({ id: ref.id, name: name.trim(), subject_id, max_limit });
+      .json({ id: ref.id, name: name.trim(), subject_id, group, max_limit });
   } catch (err) {
     console.error(err);
     return res
@@ -132,8 +141,17 @@ exports.deleteFaculty = async (req, res) => {
 // ── Settings ─────────────────────────────────────────────────
 exports.toggleSelection = async (req, res) => {
   try {
-    const { selection_open, end_time } = req.body;
-    const data = { selection_open: Boolean(selection_open) };
+    const { selection_open, end_time, group } = req.body;
+    if (!group || (group !== "A" && group !== "B")) {
+      return res.status(400).json({
+        error: "Group must be A or B",
+        code: "INVALID_REQUEST",
+      });
+    }
+
+    const data = {
+      [`selection_open_${group.toLowerCase()}`]: Boolean(selection_open),
+    };
 
     if (end_time && String(end_time).trim() !== "") {
       const parsedDate = new Date(end_time);
@@ -145,18 +163,17 @@ exports.toggleSelection = async (req, res) => {
         parsedDate.toString(),
       );
       if (!isNaN(parsedDate.getTime())) {
-        data.end_time = Timestamp.fromDate(parsedDate);
+        data[`end_time_${group.toLowerCase()}`] =
+          Timestamp.fromDate(parsedDate);
       }
     }
 
     await db.collection("settings").doc("config").set(data, { merge: true });
-    console.log("toggleSelection saved:", {
-      selection_open: data.selection_open,
-      end_time: data.end_time,
+    console.log("toggleSelection saved:", data);
+    return res.status(200).json({
+      success: true,
+      selection_open: data[`selection_open_${group.toLowerCase()}`],
     });
-    return res
-      .status(200)
-      .json({ success: true, selection_open: data.selection_open });
   } catch (err) {
     console.error("toggleSelection error:", err.message);
     return res
@@ -215,14 +232,32 @@ exports.getStats = async (req, res) => {
       db.collection("settings").doc("config").get(),
     ]);
 
-    // 2. Count UNIQUE students who have actually submitted a selection
-    const submittedPins = new Set();
+    // 2. Separate students by group
+    const studentsA = studentsSnap.docs.filter(
+      (doc) => doc.data().group === "A",
+    );
+    const studentsB = studentsSnap.docs.filter(
+      (doc) => doc.data().group === "B",
+    );
+
+    // 3. Count UNIQUE students who have actually submitted a selection by group
+    const submittedPinsA = new Set();
+    const submittedPinsB = new Set();
     const facultySelectionCount = {};
 
     selectionsSnap.docs.forEach((d) => {
       const sel = d.data();
       if (sel.pin) {
-        submittedPins.add(sel.pin);
+        // Find student to determine group
+        const studentDoc = studentsSnap.docs.find((doc) => doc.id === sel.pin);
+        if (studentDoc) {
+          const studentGroup = studentDoc.data().group;
+          if (studentGroup === "A") {
+            submittedPinsA.add(sel.pin);
+          } else if (studentGroup === "B") {
+            submittedPinsB.add(sel.pin);
+          }
+        }
       }
       if (sel.faculty_id) {
         facultySelectionCount[sel.faculty_id] =
@@ -230,12 +265,16 @@ exports.getStats = async (req, res) => {
       }
     });
 
-    // 3. FORCE the counts based on actual database sizes
-    const totalStudents = studentsSnap.size;
-    const submittedStudents = submittedPins.size;
-    const pendingStudents = Math.max(0, totalStudents - submittedStudents);
+    // 4. Calculate stats for each group
+    const totalStudentsA = studentsA.length;
+    const submittedStudentsA = submittedPinsA.size;
+    const pendingStudentsA = Math.max(0, totalStudentsA - submittedStudentsA);
 
-    // 4. Map Faculty with actual counts from the selections collection
+    const totalStudentsB = studentsB.length;
+    const submittedStudentsB = submittedPinsB.size;
+    const pendingStudentsB = Math.max(0, totalStudentsB - submittedStudentsB);
+
+    // 5. Map Faculty with actual counts from the selections collection
     const faculty = facultySnap.docs.map((d) => ({
       id: d.id,
       ...d.data(),
@@ -244,9 +283,11 @@ exports.getStats = async (req, res) => {
 
     const subjects = subjectsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // 5. Build the Subject Breakdown
-    const subjectBreakdown = subjects.map((sub) => {
-      const subFaculty = faculty.filter((f) => f.subject_id === sub.id);
+    // 6. Build the Subject Breakdown by group
+    const subjectBreakdownA = subjects.map((sub) => {
+      const subFaculty = faculty.filter(
+        (f) => f.subject_id === sub.id && f.group === "A",
+      );
       const totalSeats = subFaculty.reduce(
         (acc, f) => acc + (Number(f.max_limit) || 0),
         0,
@@ -258,22 +299,81 @@ exports.getStats = async (req, res) => {
       return { subject: sub, faculty: subFaculty, totalSeats, filledSeats };
     });
 
-    // 6. Final JSON Response — matching exactly what AdminDashboard.js expects
+    const subjectBreakdownB = subjects.map((sub) => {
+      const subFaculty = faculty.filter(
+        (f) => f.subject_id === sub.id && f.group === "B",
+      );
+      const totalSeats = subFaculty.reduce(
+        (acc, f) => acc + (Number(f.max_limit) || 0),
+        0,
+      );
+      const filledSeats = subFaculty.reduce(
+        (acc, f) => acc + (f.current_count || 0),
+        0,
+      );
+      return { subject: sub, faculty: subFaculty, totalSeats, filledSeats };
+    });
+
+    // 7. Recent selections by group
+    const recentSelectionsA = selectionsSnap.docs
+      .filter((doc) => {
+        const sel = doc.data();
+        const studentDoc = studentsSnap.docs.find((s) => s.id === sel.pin);
+        return studentDoc && studentDoc.data().group === "A";
+      })
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort(
+        (a, b) => (b.timestamp?._seconds || 0) - (a.timestamp?._seconds || 0),
+      )
+      .slice(0, 8);
+
+    const recentSelectionsB = selectionsSnap.docs
+      .filter((doc) => {
+        const sel = doc.data();
+        const studentDoc = studentsSnap.docs.find((s) => s.id === sel.pin);
+        return studentDoc && studentDoc.data().group === "B";
+      })
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort(
+        (a, b) => (b.timestamp?._seconds || 0) - (a.timestamp?._seconds || 0),
+      )
+      .slice(0, 8);
+
+    // 8. Final JSON Response
     return res.status(200).json({
-      totalStudents,
-      submittedStudents,
-      pendingStudents,
-      totalSelections: selectionsSnap.size,
-      faculty,
+      // Overall stats
+      totalStudents: studentsSnap.size,
+      submittedStudents: submittedPinsA.size + submittedPinsB.size,
+      pendingStudents:
+        studentsSnap.size - (submittedPinsA.size + submittedPinsB.size),
+
+      // Group A stats
+      groupA: {
+        totalStudents: totalStudentsA,
+        submittedStudents: submittedStudentsA,
+        pendingStudents: pendingStudentsA,
+        subjects: subjects.length,
+        faculty: faculty.filter((f) => f.group === "A"),
+        subjectBreakdown: subjectBreakdownA,
+        recentSelections: recentSelectionsA,
+      },
+
+      // Group B stats
+      groupB: {
+        totalStudents: totalStudentsB,
+        submittedStudents: submittedStudentsB,
+        pendingStudents: pendingStudentsB,
+        subjects: subjects.length,
+        faculty: faculty.filter((f) => f.group === "B"),
+        subjectBreakdown: subjectBreakdownB,
+        recentSelections: recentSelectionsB,
+      },
+
+      // Shared data
       subjects,
-      subjectBreakdown,
-      recentSelections: selectionsSnap.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .sort(
-          (a, b) => (b.timestamp?._seconds || 0) - (a.timestamp?._seconds || 0),
-        )
-        .slice(0, 8),
-      config: configSnap.exists ? configSnap.data() : { selection_open: false },
+      config: configSnap.exists
+        ? configSnap.data()
+        : { selection_open_a: false, selection_open_b: false },
     });
   } catch (err) {
     console.error("Stats Calculation Error:", err);
@@ -352,6 +452,14 @@ exports.importStudents = async (req, res) => {
   console.log("=== importStudents called ===");
 
   try {
+    const { group } = req.body;
+    if (!group || (group !== "A" && group !== "B")) {
+      return res.status(400).json({
+        error: "Group must be A or B",
+        code: "INVALID_REQUEST",
+      });
+    }
+
     // Check file received
     if (!req.file) {
       console.log("ERROR: req.file is undefined");
@@ -461,8 +569,8 @@ exports.importStudents = async (req, res) => {
 
     const pinOccurrences = {}; // Initialize for duplicate detection
 
-    for (let i = headerRowIndex + 1; i < rows.length; i++) {
-      // Start from the row after the header
+    // Start from i=1 (row after the header)
+    for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every((c) => String(c).trim() === "")) continue;
 
@@ -504,6 +612,7 @@ exports.importStudents = async (req, res) => {
           year,
           name: "",
           has_submitted: false,
+          group,
         },
         { merge: true },
       );
@@ -599,10 +708,17 @@ exports.editSubject = async (req, res) => {
 exports.editFaculty = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, subject_id, experience, max_limit } = req.body;
-    if (!name || !subject_id || !max_limit) {
+    const { name, subject_id, experience, max_limit, group } = req.body;
+    if (!name || !subject_id || !max_limit || !group) {
       return res.status(400).json({
-        error: "Name, subject_id and max_limit required",
+        error: "Name, subject_id, max_limit and group required",
+        code: "INVALID_REQUEST",
+      });
+    }
+
+    if (group !== "A" && group !== "B") {
+      return res.status(400).json({
+        error: "Group must be A or B",
         code: "INVALID_REQUEST",
       });
     }
@@ -611,12 +727,13 @@ exports.editFaculty = async (req, res) => {
     const existingSnap = await db
       .collection("faculty")
       .where("subject_id", "==", subject_id)
+      .where("group", "==", group)
       .get();
     for (const doc of existingSnap.docs) {
       if (doc.id === id) continue;
       if (doc.data().name.trim().toLowerCase() === trimmedName) {
         return res.status(409).json({
-          error: `Faculty "${name.trim()}" already exists for this subject`,
+          error: `Faculty "${name.trim()}" already exists for this subject and group`,
           code: "ALREADY_EXISTS",
         });
       }
@@ -630,6 +747,7 @@ exports.editFaculty = async (req, res) => {
         subject_id,
         experience: experience ? Number(experience) : null,
         max_limit: Number(max_limit),
+        group,
       });
     return res.status(200).json({ success: true });
   } catch (err) {

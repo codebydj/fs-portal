@@ -22,12 +22,10 @@ exports.studentLogin = async (req, res) => {
     const { pin, dob } = req.body;
 
     if (!pin || !dob) {
-      return res
-        .status(400)
-        .json({
-          error: "PIN and date of birth are required",
-          code: "INVALID_CREDENTIALS",
-        });
+      return res.status(400).json({
+        error: "PIN and date of birth are required",
+        code: "INVALID_CREDENTIALS",
+      });
     }
 
     const normalizedPin = pin.trim().toUpperCase();
@@ -100,6 +98,7 @@ exports.studentLogin = async (req, res) => {
         name: student.name || "",
         branch: student.branch || parsed.branch,
         year: student.year || parsed.year,
+        group: student.group || "A",
         has_submitted: student.has_submitted || false,
       },
       has_submitted: student.has_submitted || false,

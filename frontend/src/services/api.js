@@ -80,10 +80,10 @@ export const deleteFaculty = (id) =>
   request(`/admin/faculty/${id}`, { method: "DELETE" });
 
 // ── Admin — Settings & Resets ─────────────────────────────────
-export const toggleSelection = (selection_open, end_time) =>
+export const toggleSelection = (selection_open, end_time, group) =>
   request("/admin/toggle-selection", {
     method: "POST",
-    body: JSON.stringify({ selection_open, end_time }),
+    body: JSON.stringify({ selection_open, end_time, group }),
   });
 export const resetSelections = () =>
   request("/admin/reset-selections", { method: "POST" });
@@ -133,10 +133,39 @@ export const exportFacultySelectionsWithStudentsCSV = () => {
   ).then((res) => res.blob());
 };
 
-export const importStudents = (file) => {
+export const exportStudentWiseGroupA = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-student-wise-group-a`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
+export const exportStudentWiseGroupB = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-student-wise-group-b`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
+export const exportFacultyWiseGroupA = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-faculty-wise-group-a`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
+export const exportFacultyWiseGroupB = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-faculty-wise-group-b`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
+export const importStudents = (file, group) => {
   const token = getToken();
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("group", group);
   return fetch(`${BASE_URL}/admin/import-students`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },

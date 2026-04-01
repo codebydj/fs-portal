@@ -72,6 +72,10 @@ const {
   exportSubjectsCSV,
   exportFacultyCSV,
   exportStudentsCSV,
+  exportStudentWiseGroupA,
+  exportStudentWiseGroupB,
+  exportFacultyWiseGroupA,
+  exportFacultyWiseGroupB,
 } = require("./controllers/exportController");
 const { verifyStudent } = require("./middlewares/studentAuth");
 
@@ -98,6 +102,26 @@ app.get("/admin/export-csv", verifyAdmin, exportCSV);
 app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
 app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
+app.get(
+  "/admin/export-student-wise-group-a",
+  verifyAdmin,
+  exportStudentWiseGroupA,
+);
+app.get(
+  "/admin/export-student-wise-group-b",
+  verifyAdmin,
+  exportStudentWiseGroupB,
+);
+app.get(
+  "/admin/export-faculty-wise-group-a",
+  verifyAdmin,
+  exportFacultyWiseGroupA,
+);
+app.get(
+  "/admin/export-faculty-wise-group-b",
+  verifyAdmin,
+  exportFacultyWiseGroupB,
+);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () =>

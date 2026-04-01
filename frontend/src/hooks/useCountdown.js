@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { db } from "../services/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
-export function useCountdown() {
+export function useCountdown(group = "A") {
   const [timeLeft, setTimeLeft] = useState(null);
   const [selectionOpen, setSelectionOpen] = useState(null); // null = still loading
   const [endTime, setEndTime] = useState(null);
@@ -15,8 +15,13 @@ export function useCountdown() {
       (snap) => {
         if (snap.exists()) {
           const data = snap.data();
-          setSelectionOpen(data.selection_open === true);
-          setEndTime(data.end_time ? data.end_time.toDate() : null);
+          const groupLower = group.toLowerCase();
+          setSelectionOpen(data[`selection_open_${groupLower}`] === true);
+          setEndTime(
+            data[`end_time_${groupLower}`]
+              ? data[`end_time_${groupLower}`].toDate()
+              : null,
+          );
         } else {
           // Document doesn't exist yet — treat as closed
           setSelectionOpen(false);
@@ -28,10 +33,10 @@ export function useCountdown() {
         console.error("useCountdown snapshot error:", error);
         setSelectionOpen(false);
         setConfigLoaded(true);
-      }
+      },
     );
     return () => unsub();
-  }, []);
+  }, [group]);
 
   useEffect(() => {
     if (!endTime) {

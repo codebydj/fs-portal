@@ -78,6 +78,9 @@ async function processBuffer(buffer) {
     (h) =>
       h.includes("name") || h.includes("student") || h.includes("candidate"),
   );
+  const groupIdx = headers.findIndex(
+    (h) => h.includes("group") || h.includes("grp"),
+  );
 
   if (pinIdx === -1)
     throw new Error(`PIN column not found. Headers: [${headers.join(", ")}]`);
@@ -110,6 +113,12 @@ async function processBuffer(buffer) {
       .toUpperCase();
     const parsedDob = parseDob(row[dobIdx]);
     const studentName = nameIdx !== -1 ? String(row[nameIdx] || "").trim() : "";
+    const studentGroup =
+      groupIdx !== -1
+        ? String(row[groupIdx] || "")
+            .trim()
+            .toUpperCase()
+        : "A"; // Default to A if not provided
 
     if (!PIN_REGEX.test(rawPin)) {
       skippedCount++;
@@ -122,6 +131,14 @@ async function processBuffer(buffer) {
       if (errors.length < 20)
         errors.push(
           `Row ${i + 1}: Cannot parse DOB "${row[dobIdx]}" for PIN ${rawPin}`,
+        );
+      continue;
+    }
+    if (studentGroup !== "A" && studentGroup !== "B") {
+      skippedCount++;
+      if (errors.length < 20)
+        errors.push(
+          `Row ${i + 1}: Invalid group "${studentGroup}" for PIN ${rawPin}. Must be A or B.`,
         );
       continue;
     }
@@ -141,6 +158,7 @@ async function processBuffer(buffer) {
         branch: rawPin.substring(5, 8),
         year: "20" + rawPin.substring(0, 2),
         name: studentName,
+        group: studentGroup,
         has_submitted: false,
       },
       { merge: true },

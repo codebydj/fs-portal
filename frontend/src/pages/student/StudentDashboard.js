@@ -70,7 +70,6 @@ const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
           {user?.name}
         </h2>
         <p className="text-sm text-slate-600 font-mono">{user?.pin}</p>
-        
       </div>
       <div className="px-5 py-4 border-t border-b border-slate-100 bg-slate-50">
         <h3 className="font-semibold text-slate-900 font-display text-sm">
@@ -95,8 +94,7 @@ const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
           {enriched.map((row, i) => (
             <tr
               key={i}
-              className={`border-b border-slate-100 last:border-0 ${i % 2 !== 1 ? "bg-[#eeeeee]" : ""}`}
-            >
+              className={`border-b border-slate-100 last:border-0 ${i % 2 !== 1 ? "bg-[#eeeeee]" : ""}`}>
               <td className="px-5 py-3 font-medium text-slate-800">
                 {row.subject.name}
               </td>
@@ -128,7 +126,9 @@ const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
 
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
-  const { selectionOpen, expired, configLoaded } = useCountdown();
+  const { selectionOpen, expired, configLoaded } = useCountdown(
+    user?.group || "A",
+  );
 
   const [subjects, setSubjects] = useState([]);
   const [selections, setSelections] = useState({});
@@ -232,10 +232,10 @@ export default function StudentDashboard() {
       element.style.overflow = "visible";
       element.style.maxHeight = "none";
       element.style.height = "auto"; // Ensure height adjusts to content
-      element.style.paddingBottom = '50px'; // Add extra space at the bottom
+      element.style.paddingBottom = "50px"; // Add extra space at the bottom
 
       // Add a small delay to allow DOM to re-render with new styles
-      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      await new Promise((resolve) => setTimeout(resolve, 100)); // 100ms delay
 
       const dataUrl = await htmlToImage.toJpeg(element, {
         quality: 0.95,
@@ -297,6 +297,20 @@ export default function StudentDashboard() {
               <span className="text-sm text-slate-500">{user?.branch}</span>
               <span className="text-slate-300">·</span>
               <span className="text-sm text-slate-500">{user?.year}</span>
+              <span className="text-slate-300">·</span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Group: {user?.group || "A"}
+              </span>
             </div>
           </div>
 
@@ -487,6 +501,7 @@ export default function StudentDashboard() {
                 selections={selections}
                 onSelect={handleSelect}
                 disabled={isSubmitted || isSelectionClosed}
+                userGroup={user?.group || "A"}
               />
             </motion.div>
           ))}

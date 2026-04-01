@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -24,6 +30,10 @@ import {
   exportFacultyCSV,
   exportStudentsCSV,
   importStudents,
+  exportStudentWiseGroupA,
+  exportStudentWiseGroupB,
+  exportFacultyWiseGroupA,
+  exportFacultyWiseGroupB,
 } from "../../services/api";
 import {
   useRealtimeFaculty,
@@ -106,6 +116,7 @@ function StatCard({ label, value, sub, color = "blue", icon }) {
     yellow: "bg-yellow-50 text-yellow-600",
     slate: "bg-slate-100 text-slate-600",
     red: "bg-red-50 text-red-600",
+    purple: "bg-purple-50 text-purple-600",
   };
   return (
     <div className="card p-5">
@@ -333,253 +344,263 @@ function SeatBar({ faculty, subjects = [], onView }) {
 }
 
 // ── Dashboard Tab ─────────────────────────────────────────────
-function DashboardTab({ stats }) {
+function DashboardTab({ stats, error }) {
   const [viewFaculty, setViewFaculty] = useState(null);
+  const [loading, setLoading] = useState(!stats);
 
-  if (!stats)
+  useEffect(() => {
+    if (stats) {
+      setLoading(false);
+    }
+  }, [stats]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <svg
+            className="w-12 h-12 text-red-400 mx-auto mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <p className="text-red-600 font-medium mb-2">
+            Failed to load dashboard
+          </p>
+          <p className="text-slate-500 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !stats || !stats.groupA || !stats.groupB)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <p className="ml-3 text-slate-500">Loading dashboard...</p>
       </div>
     );
+
+  const GroupDashboard = ({ groupData, groupName, color }) => {
+    // Defensively merge with defaults to ensure properties exist, preventing "—" from showing.
+    const safeGroupData = {
+      totalStudents: 0,
+      submittedStudents: 0,
+      pendingStudents: 0,
+      faculty: [],
+      recentSelections: [],
+      ...groupData,
+    };
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-slate-900 font-display text-lg">
+          Group {groupName} Dashboard
+        </h3>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Students"
+            value={safeGroupData.totalStudents}
+            color={color}
+            icon={
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Submitted"
+            value={safeGroupData.submittedStudents}
+            color="green"
+            sub={`${safeGroupData.totalStudents > 0 ? Math.round((safeGroupData.submittedStudents / safeGroupData.totalStudents) * 100) : 0}% done`}
+            icon={
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Pending"
+            value={safeGroupData.pendingStudents}
+            color="yellow"
+            icon={
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            }
+          />
+          <StatCard
+            label="Subjects"
+            value={stats.subjects?.length}
+            color="slate"
+            sub={`${safeGroupData.faculty?.length || 0} faculty`}
+            icon={
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
+            }
+          />
+        </div>
+
+        {safeGroupData.totalStudents > 0 && (
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold text-slate-900 font-display text-sm">
+                Group {groupName} Submission Progress
+              </h4>
+              <span className="text-sm font-bold text-primary-600">
+                {Math.round(
+                  (safeGroupData.submittedStudents /
+                    safeGroupData.totalStudents) *
+                    100,
+                )}
+                %
+              </span>
+            </div>
+            <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-primary-600 rounded-full"
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${(safeGroupData.submittedStudents / safeGroupData.totalStudents) * 100}%`,
+                }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-xs text-slate-400">
+                {safeGroupData.submittedStudents} submitted
+              </span>
+              <span className="text-xs text-slate-400">
+                {safeGroupData.pendingStudents} pending
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="card p-5">
+            <h4 className="font-semibold text-slate-900 font-display mb-4">
+              Group {groupName} Faculty Seat Fill
+            </h4>
+            {!safeGroupData.faculty?.length ? (
+              <p className="text-slate-400 text-sm text-center py-6">
+                No faculty added yet for Group {groupName}.
+              </p>
+            ) : (
+              <div>
+                {safeGroupData.faculty.map((f) => (
+                  <SeatBar
+                    key={f.id}
+                    faculty={f}
+                    subjects={stats.subjects || []}
+                    onView={(fac) => setViewFaculty(fac)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="card p-5">
+            <h4 className="font-semibold text-slate-900 font-display mb-4">
+              Group {groupName} Recent Submissions
+            </h4>
+            {!safeGroupData.recentSelections?.length ? (
+              <p className="text-slate-400 text-sm text-center py-6">
+                No submissions yet for Group {groupName}.
+              </p>
+            ) : (
+              <div className="overflow-y-auto max-h-64 divide-y divide-slate-100">
+                {safeGroupData.recentSelections.map((sel, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
+                      <span className="font-mono text-xs font-medium text-slate-700">
+                        {sel.pin}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      {sel.timestamp?.toDate
+                        ? new Date(sel.timestamp.toDate()).toLocaleTimeString(
+                            "en-IN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            },
+                          )
+                        : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">
+              Showing last {safeGroupData.recentSelections?.length || 0} unique
+              submissions
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const viewSubject = viewFaculty
     ? (stats.subjects || []).find((s) => s.id === viewFaculty.subject_id)
     : null;
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Students"
-          value={stats.totalStudents}
-          color="blue"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Submitted"
-          value={stats.submittedStudents}
-          color="green"
-          sub={`${stats.totalStudents > 0 ? Math.round((stats.submittedStudents / stats.totalStudents) * 100) : 0}% done`}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Pending"
-          value={stats.pendingStudents}
-          color="yellow"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Subjects"
-          value={stats.subjects?.length}
-          color="slate"
-          sub={`${stats.faculty?.length || 0} faculty`}
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-          }
-        />
-      </div>
-
-      {stats.totalStudents > 0 && (
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-slate-900 font-display text-sm">
-              Overall Submission Progress
-            </h3>
-            <span className="text-sm font-bold text-primary-600">
-              {Math.round(
-                (stats.submittedStudents / stats.totalStudents) * 100,
-              )}
-              %
-            </span>
-          </div>
-          <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-primary-600 rounded-full"
-              initial={{ width: 0 }}
-              animate={{
-                width: `${(stats.submittedStudents / stats.totalStudents) * 100}%`,
-              }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-          </div>
-          <div className="flex justify-between mt-1.5">
-            <span className="text-xs text-slate-400">
-              {stats.submittedStudents} submitted
-            </span>
-            <span className="text-xs text-slate-400">
-              {stats.pendingStudents} pending
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="card p-5">
-          <h3 className="font-semibold text-slate-900 font-display mb-4">
-            Faculty Seat Fill
-          </h3>
-          {!stats.faculty?.length ? (
-            <p className="text-slate-400 text-sm text-center py-6">
-              No faculty added yet.
-            </p>
-          ) : (
-            <div>
-              {stats.faculty.map((f) => (
-                <SeatBar
-                  key={f.id}
-                  faculty={f}
-                  subjects={stats.subjects || []}
-                  onView={(fac) => setViewFaculty(fac)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="card p-5">
-          <h3 className="font-semibold text-slate-900 font-display mb-4">
-            Recent Submissions
-          </h3>
-          {!stats.recentSelections?.length ? (
-            <p className="text-slate-400 text-sm text-center py-6">
-              No submissions yet.
-            </p>
-          ) : (
-            <div className="overflow-y-auto max-h-64 divide-y divide-slate-100">
-              {stats.recentSelections.map((sel, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
-                    <span className="font-mono text-xs font-medium text-slate-700">
-                      {sel.pin}
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">
-                    {sel.timestamp?.toDate
-                      ? new Date(sel.timestamp.toDate()).toLocaleTimeString(
-                          "en-IN",
-                          { hour: "2-digit", minute: "2-digit", hour12: true },
-                        )
-                      : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">
-            Showing last {stats.recentSelections?.length || 0} unique
-            submissions
-          </p>
-        </div>
-      </div>
-
-      <div className="card p-5">
-        <h3 className="font-semibold text-slate-900 font-display mb-4">
-          Subject Breakdown
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200">
-                {["Subject", "Code", "Faculty", "Total Seats", "Filled"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="text-left py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                      {h}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {stats.subjectBreakdown?.map((row, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-2.5 px-3 font-medium text-slate-800">
-                    {row.subject.name}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-xs text-slate-500">
-                    {row.subject.code}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">
-                    {row.faculty.length}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">
-                    {row.totalSeats}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span
-                      className={`font-medium ${row.filledSeats >= row.totalSeats ? "text-red-600" : "text-green-600"}`}>
-                      {row.filledSeats}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {viewFaculty && (
-        <FacultyStudentsModal
-          faculty={viewFaculty}
-          subject={viewSubject}
-          onClose={() => setViewFaculty(null)}
-        />
-      )}
+    <div className="space-y-8">
+      <GroupDashboard groupData={stats.groupA} groupName="A" color="blue" />
+      <GroupDashboard groupData={stats.groupB} groupName="B" color="purple" />
+      <FacultyStudentsModal
+        faculty={viewFaculty}
+        subject={viewSubject}
+        onClose={() => setViewFaculty(null)}
+      />
     </div>
   );
 }
@@ -844,6 +865,7 @@ function FacultyTab({ stats, onRefresh }) {
     name: "",
     subject_id: "",
     max_limit: "",
+    group: "A",
   });
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -854,24 +876,12 @@ function FacultyTab({ stats, onRefresh }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [filterSubject, setFilterSubject] = useState("");
-
-  //date for csv filename
-  const today = new Date();
-  const formatteddate =
-    String(today.getDate()).padStart(2, "0") +
-    "-" +
-    String(today.getMonth() + 1).padStart(2, "0") +
-    "-" +
-    today.getFullYear() +
-    "_" +
-    String(today.getHours()).padStart(2, "0") +
-    "_" +
-    String(today.getMinutes()).padStart(2, "0");
+  const [filterGroup, setFilterGroup] = useState(""); //date for csv filename
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.subject_id || !form.max_limit)
-      return toast.error("Name, subject and max seats required");
+    if (!form.name || !form.subject_id || !form.max_limit || !form.group)
+      return toast.error("Name, subject, max seats and group required");
     setLoading(true);
     try {
       // CHANGE 2: Removed experience from addFaculty call
@@ -881,7 +891,7 @@ function FacultyTab({ stats, onRefresh }) {
       });
       toast.success("Faculty added!");
       // CHANGE 3: Removed "experience" from reset
-      setForm({ name: "", subject_id: "", max_limit: "" });
+      setForm({ name: "", subject_id: "", max_limit: "", group: "A" });
       onRefresh();
     } catch (err) {
       toast.error(err.error || "Failed to add faculty");
@@ -897,6 +907,7 @@ function FacultyTab({ stats, onRefresh }) {
       name: f.name,
       subject_id: f.subject_id,
       max_limit: f.max_limit,
+      group: f.group,
     });
   };
   const cancelEdit = () => {
@@ -950,9 +961,12 @@ function FacultyTab({ stats, onRefresh }) {
     }
   };
 
-  const filteredFaculty = filterSubject
-    ? (stats?.faculty || []).filter((f) => f.subject_id === filterSubject)
-    : stats?.faculty || [];
+  const facultyA = (stats?.faculty || [])
+    .filter((f) => f.group === "A")
+    .filter((f) => !filterSubject || f.subject_id === filterSubject);
+  const facultyB = (stats?.faculty || [])
+    .filter((f) => f.group === "B")
+    .filter((f) => !filterSubject || f.subject_id === filterSubject);
 
   return (
     <div className="space-y-6">
@@ -960,11 +974,11 @@ function FacultyTab({ stats, onRefresh }) {
         <h3 className="font-semibold text-slate-900 font-display mb-4">
           Add New Faculty
         </h3>
-        {/* CHANGE 6: Removed experience field from Add form, changed grid */}
         <form
+          // CHANGE 6: Removed experience field from Add form, changed grid
           onSubmit={handleAdd}
-          className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="col-span-2 sm:col-span-1">
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
             <label className="label">Faculty Name</label>
             <input
               className="input-field"
@@ -1002,8 +1016,20 @@ function FacultyTab({ stats, onRefresh }) {
               }
             />
           </div>
-          {/* CHANGE 7: Experience field REMOVED from here */}
-          <div className="flex items-end">
+          <div>
+            <label className="label">Group</label>
+            <select
+              className="input-field"
+              value={form.group}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, group: e.target.value }))
+              }>
+              <option value="A">Group A</option>
+              <option value="B">Group B</option>
+            </select>
+          </div>
+          <div className="flex items-end col-span-2 sm:col-span-4">
+            {/* CHANGE 7: Experience field REMOVED from here */}
             <button
               type="submit"
               className="btn-primary w-full"
@@ -1014,21 +1040,12 @@ function FacultyTab({ stats, onRefresh }) {
         </form>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
+      <div className="card p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h3 className="font-semibold text-slate-900 font-display">
-            Faculty ({filteredFaculty.length})
+            Faculty Filters
           </h3>
           <div className="flex items-center gap-3">
-            <DownloadCSVButton
-              label="Download CSV"
-              onClick={() =>
-                downloadBlob(
-                  exportFacultyCSV(),
-                  `faculty_list_${formatteddate}.csv`,
-                )
-              }
-            />
             <select
               className="input-field py-1.5 text-sm w-48"
               value={filterSubject}
@@ -1040,145 +1057,295 @@ function FacultyTab({ stats, onRefresh }) {
                 </option>
               ))}
             </select>
-            {stats?.faculty?.length > 0 && (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap">
-                Reset All Faculty
-              </button>
-            )}
+            <select
+              className="input-field py-1.5 text-sm w-32"
+              value={filterGroup}
+              onChange={(e) => setFilterGroup(e.target.value)}>
+              <option value="">All Groups</option>
+              <option value="A">Group A</option>
+              <option value="B">Group B</option>
+            </select>
           </div>
         </div>
-        {!filteredFaculty.length ? (
-          <div className="py-10 text-center text-slate-400 text-sm">
-            No faculty found.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                {/* CHANGE 8: Removed "Exp (yrs)" from table headers */}
-                <tr>
-                  {["Name", "Subject", "Seats", "Actions"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFaculty.map((f) => {
-                  const subject = stats?.subjects?.find(
-                    (s) => s.id === f.subject_id,
-                  );
-                  const isEditing = editingId === f.id;
-                  return (
-                    <tr
-                      key={f.id}
-                      className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <input
-                            className="input-field py-1 text-sm w-36"
-                            value={editForm.name}
-                            onChange={(e) =>
-                              setEditForm((p) => ({
-                                ...p,
-                                name: e.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          <span className="font-medium text-slate-800">
-                            {f.name}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <select
-                            className="input-field py-1 text-sm"
-                            value={editForm.subject_id}
-                            onChange={(e) =>
-                              setEditForm((p) => ({
-                                ...p,
-                                subject_id: e.target.value,
-                              }))
-                            }>
-                            {stats?.subjects?.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="text-slate-600">
-                            {subject?.name || "—"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            className="input-field py-1 text-sm w-20"
-                            value={editForm.max_limit}
-                            onChange={(e) =>
-                              setEditForm((p) => ({
-                                ...p,
-                                max_limit: e.target.value,
-                              }))
-                            }
-                          />
-                        ) : (
-                          <span
-                            className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
-                            {f.current_count}/{f.max_limit}
-                          </span>
-                        )}
-                      </td>
-                      {/* CHANGE 9: Removed experience <td> column entirely */}
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEdit(f.id)}
-                              disabled={editLoading}
-                              className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
-                              {editLoading ? "..." : "Save"}
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => startEdit(f)}
-                              className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setDeleteId(f.id)}
-                              className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
+      {/* Group A Faculty Table */}
+      {(filterGroup === "" || filterGroup === "A") && (
+        <div
+          className="card overflow-hidden"
+          key={`faculty-a-${facultyA.length}`}>
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
+            <h3 className="font-semibold text-slate-900 font-display">
+              Group A Faculty ({facultyA.length})
+            </h3>
+          </div>
+          {!facultyA.length ? (
+            <div className="py-10 text-center text-slate-400 text-sm">
+              No faculty found for Group A with current filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {["Name", "Subject", "Seats", "Actions"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {facultyA.map((f) => {
+                    const subject = stats?.subjects?.find(
+                      (s) => s.id === f.subject_id,
+                    );
+                    const isEditing = editingId === f.id;
+                    return (
+                      <tr
+                        key={f.id}
+                        className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <input
+                              className="input-field py-1 text-sm w-36"
+                              value={editForm.name}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  name: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <span className="font-medium text-slate-800">
+                              {f.name}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <select
+                              className="input-field py-1 text-sm"
+                              value={editForm.subject_id}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  subject_id: e.target.value,
+                                }))
+                              }>
+                              {stats?.subjects?.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-slate-600">
+                              {subject?.name || "—"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              className="input-field py-1 text-sm w-20"
+                              value={editForm.max_limit}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  max_limit: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <span
+                              className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
+                              {f.current_count}/{f.max_limit}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(f.id)}
+                                disabled={editLoading}
+                                className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
+                                {editLoading ? "..." : "Save"}
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => startEdit(f)}
+                                className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(f.id)}
+                                className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Group B Faculty Table */}
+      {(filterGroup === "" || filterGroup === "B") && (
+        <div
+          className="card overflow-hidden"
+          key={`faculty-b-${facultyB.length}`}>
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
+            <h3 className="font-semibold text-slate-900 font-display">
+              Group B Faculty ({facultyB.length})
+            </h3>
+          </div>
+          {!facultyB.length ? (
+            <div className="py-10 text-center text-slate-400 text-sm">
+              No faculty found for Group B with current filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {["Name", "Subject", "Seats", "Actions"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {facultyB.map((f) => {
+                    const subject = stats?.subjects?.find(
+                      (s) => s.id === f.subject_id,
+                    );
+                    const isEditing = editingId === f.id;
+                    return (
+                      <tr
+                        key={f.id}
+                        className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <input
+                              className="input-field py-1 text-sm w-36"
+                              value={editForm.name}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  name: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <span className="font-medium text-slate-800">
+                              {f.name}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <select
+                              className="input-field py-1 text-sm"
+                              value={editForm.subject_id}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  subject_id: e.target.value,
+                                }))
+                              }>
+                              {stats?.subjects?.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-slate-600">
+                              {subject?.name || "—"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              className="input-field py-1 text-sm w-20"
+                              value={editForm.max_limit}
+                              onChange={(e) =>
+                                setEditForm((p) => ({
+                                  ...p,
+                                  max_limit: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <span
+                              className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
+                              {f.current_count}/{f.max_limit}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(f.id)}
+                                disabled={editLoading}
+                                className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
+                                {editLoading ? "..." : "Save"}
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => startEdit(f)}
+                                className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(f.id)}
+                                className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       <ConfirmModal
         open={!!deleteId}
         title="Delete Faculty"
@@ -1249,7 +1416,7 @@ function SortIcon({ column, sortKey, sortDir }) {
   );
 }
 
-function StudentsTab({ onRefresh }) {
+function StudentsTab({ onRefresh, refreshTrigger }) {
   const [view, setView] = useState("all");
   const [students, setStudents] = useState([]);
   const [total, setTotal] = useState(0);
@@ -1261,6 +1428,8 @@ function StudentsTab({ onRefresh }) {
   const [deleting, setDeleting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [filterBranch, setFilterBranch] = useState("");
+  const [filterYear, setFilterYear] = useState("");
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -1277,7 +1446,7 @@ function StudentsTab({ onRefresh }) {
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
+  }, [fetchStudents, refreshTrigger]);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -1320,12 +1489,14 @@ function StudentsTab({ onRefresh }) {
 
   const filtered = students.filter((s) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       s.pin?.toLowerCase().includes(q) ||
       s.branch?.toLowerCase().includes(q) ||
       s.year?.toString().includes(q) ||
-      s.name?.toLowerCase().includes(q)
-    );
+      s.name?.toLowerCase().includes(q);
+    const matchesBranch = !filterBranch || s.branch === filterBranch;
+    const matchesYear = !filterYear || s.year?.toString() === filterYear;
+    return matchesSearch && matchesBranch && matchesYear;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -1341,6 +1512,9 @@ function StudentsTab({ onRefresh }) {
     if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
     return 0;
   });
+
+  const studentsA = sorted.filter((s) => s.group === "A");
+  const studentsB = sorted.filter((s) => s.group === "B");
 
   const COLS = [
     { key: "name", label: "Name" },
@@ -1410,6 +1584,32 @@ function StudentsTab({ onRefresh }) {
                   </button>
                 )}
               </div>
+              <select
+                className="input-field py-1.5 text-sm w-32"
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value)}>
+                <option value="">All Branches</option>
+                {[
+                  ...new Set(students.map((s) => s.branch).filter(Boolean)),
+                ].map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="input-field py-1.5 text-sm w-24"
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}>
+                <option value="">All Years</option>
+                {[...new Set(students.map((s) => s.year).filter(Boolean))].map(
+                  (year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ),
+                )}
+              </select>
               <div className="flex items-center gap-2">
                 <DownloadCSVButton
                   label="Download CSV"
@@ -1453,78 +1653,178 @@ function StudentsTab({ onRefresh }) {
             <p className="text-slate-400 text-sm">No students found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  {COLS.map((col) => (
-                    <th
-                      key={col.key}
-                      onClick={() => handleSort(col.key)}
-                      className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
-                      <span className="flex items-center gap-1">
-                        {col.label}
-                        <SortIcon
-                          column={col.key}
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                  ))}
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence initial={false}>
-                  {sorted.map((s) => (
-                    <motion.tr
-                      key={s.id}
-                      layout
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                      className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-5 py-3 text-slate-800 font-medium">
-                        {s.name || (
-                          <span className="text-slate-300 italic text-xs">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                          {s.pin}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {s.branch || "—"}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {s.year || "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        {s.has_submitted ? (
-                          <span className="badge-green">✓ Submitted</span>
-                        ) : (
-                          <span className="badge-yellow">Pending</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <button
-                          onClick={() => setDeletePin(s.pin)}
-                          className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
-                          Delete
-                        </button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            {/* Group A Students Table */}
+            {studentsA.length > 0 && (
+              <div
+                className="card overflow-hidden"
+                key={`students-a-${studentsA.length}`}>
+                <div className="px-5 py-4 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-900 font-display">
+                    Group A Students ({studentsA.length})
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        {COLS.map((col) => (
+                          <th
+                            key={col.key}
+                            onClick={() => handleSort(col.key)}
+                            className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
+                            <span className="flex items-center gap-1">
+                              {col.label}
+                              <SortIcon
+                                column={col.key}
+                                sortKey={sortKey}
+                                sortDir={sortDir}
+                              />
+                            </span>
+                          </th>
+                        ))}
+                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence initial={false}>
+                        {studentsA.map((s) => (
+                          <motion.tr
+                            key={s.id}
+                            layout
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.15 }}
+                            className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-5 py-3 text-slate-800 font-medium">
+                              {s.name || (
+                                <span className="text-slate-300 italic text-xs">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                {s.pin}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-slate-600">
+                              {s.branch || "—"}
+                            </td>
+                            <td className="px-5 py-3 text-slate-600">
+                              {s.year || "—"}
+                            </td>
+                            <td className="px-5 py-3">
+                              {s.has_submitted ? (
+                                <span className="badge-green">✓ Submitted</span>
+                              ) : (
+                                <span className="badge-yellow">Pending</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <button
+                                onClick={() => setDeletePin(s.pin)}
+                                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                                Delete
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Group B Students Table */}
+            {studentsB.length > 0 && (
+              <div
+                className="card overflow-hidden"
+                key={`students-b-${studentsB.length}`}>
+                <div className="px-5 py-4 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-900 font-display">
+                    Group B Students ({studentsB.length})
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        {COLS.map((col) => (
+                          <th
+                            key={col.key}
+                            onClick={() => handleSort(col.key)}
+                            className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
+                            <span className="flex items-center gap-1">
+                              {col.label}
+                              <SortIcon
+                                column={col.key}
+                                sortKey={sortKey}
+                                sortDir={sortDir}
+                              />
+                            </span>
+                          </th>
+                        ))}
+                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence initial={false}>
+                        {studentsB.map((s) => (
+                          <motion.tr
+                            key={s.id}
+                            layout
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.15 }}
+                            className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-5 py-3 text-slate-800 font-medium">
+                              {s.name || (
+                                <span className="text-slate-300 italic text-xs">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                {s.pin}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-slate-600">
+                              {s.branch || "—"}
+                            </td>
+                            <td className="px-5 py-3 text-slate-600">
+                              {s.year || "—"}
+                            </td>
+                            <td className="px-5 py-3">
+                              {s.has_submitted ? (
+                                <span className="badge-green">✓ Submitted</span>
+                              ) : (
+                                <span className="badge-yellow">Pending</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <button
+                                onClick={() => setDeletePin(s.pin)}
+                                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                                Delete
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1655,15 +1955,20 @@ function SettingsTab({
   const tooltipRef = useRef(null);
   const buttonRef = useRef(null);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [endTime, setEndTime] = useState("");
-  const [toggling, setToggling] = useState(false);
+  const [endTimeA, setEndTimeA] = useState("");
+  const [endTimeB, setEndTimeB] = useState("");
+  const [togglingA, setTogglingA] = useState(false);
+  const [togglingB, setTogglingB] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [pendingImport, setPendingImport] = useState(null);
-  const [endTimeError, setEndTimeError] = useState("");
-  const isOpen = stats?.config?.selection_open;
+  const [endTimeErrorA, setEndTimeErrorA] = useState("");
+  const [endTimeErrorB, setEndTimeErrorB] = useState("");
+  const [importGroup, setImportGroup] = useState("A");
+  const isOpenA = stats?.config?.selection_open_a;
+  const isOpenB = stats?.config?.selection_open_b;
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -1698,8 +2003,20 @@ function SettingsTab({
     "-" +
     String(today.getMinutes()).padStart(2, "0");
 
-  const savedEndTimeStr = realtimeEndTime
-    ? realtimeEndTime.toLocaleString("en-IN", {
+  const savedEndTimeA = stats?.config?.end_time_a
+    ? stats.config.end_time_a.toDate().toLocaleString("en-IN", {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
+
+  const savedEndTimeB = stats?.config?.end_time_b
+    ? stats.config.end_time_b.toDate().toLocaleString("en-IN", {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         day: "2-digit",
         month: "short",
@@ -1712,40 +2029,85 @@ function SettingsTab({
 
   const minDateTime = new Date(Date.now() + 60000).toISOString().slice(0, 16);
 
-  const handleEndTimeChange = (val) => {
-    setEndTime(val);
+  const handleEndTimeChangeA = (val) => {
+    setEndTimeA(val);
     if (val) {
       const localDate = new Date(val);
       if (isNaN(localDate.getTime()) || localDate <= new Date()) {
-        setEndTimeError("End time must be in the future");
+        setEndTimeErrorA("End time must be in the future");
       } else {
-        setEndTimeError("");
+        setEndTimeErrorA("");
       }
     } else {
-      setEndTimeError("");
+      setEndTimeErrorA("");
     }
   };
 
-  const handleToggle = async () => {
-    if (endTimeError) return toast.error("Fix the end time error first");
-    if (endTime) {
-      const selected = new Date(endTime);
+  const handleEndTimeChangeB = (val) => {
+    setEndTimeB(val);
+    if (val) {
+      const localDate = new Date(val);
+      if (isNaN(localDate.getTime()) || localDate <= new Date()) {
+        setEndTimeErrorB("End time must be in the future");
+      } else {
+        setEndTimeErrorB("");
+      }
+    } else {
+      setEndTimeErrorB("");
+    }
+  };
+
+  const handleToggleA = async () => {
+    if (endTimeErrorA) return toast.error("Fix the end time error first");
+    if (endTimeA) {
+      const selected = new Date(endTimeA);
       if (isNaN(selected.getTime()) || selected <= new Date()) {
-        setEndTimeError("End time must be in the future");
+        setEndTimeErrorA("End time must be in the future");
         return toast.error("End time must be in the future");
       }
     }
-    setToggling(true);
+    setTogglingA(true);
     try {
-      const isoEndTime = endTime ? new Date(endTime).toISOString() : undefined;
-      await toggleSelection(!isOpen, isoEndTime);
-      toast.success(`Selection ${!isOpen ? "opened" : "closed"} successfully.`);
-      setEndTime("");
+      const isoEndTime = endTimeA
+        ? new Date(endTimeA).toISOString()
+        : undefined;
+      await toggleSelection(!isOpenA, isoEndTime, "A");
+      toast.success(
+        `Selection for Group A ${!isOpenA ? "opened" : "closed"} successfully.`,
+      );
+      setEndTimeA("");
       onRefresh();
     } catch (err) {
       toast.error(err.error || "Failed to toggle");
     } finally {
-      setToggling(false);
+      setTogglingA(false);
+    }
+  };
+
+  const handleToggleB = async () => {
+    if (endTimeErrorB) return toast.error("Fix the end time error first");
+    if (endTimeB) {
+      const selected = new Date(endTimeB);
+      if (isNaN(selected.getTime()) || selected <= new Date()) {
+        setEndTimeErrorB("End time must be in the future");
+        return toast.error("End time must be in the future");
+      }
+    }
+    setTogglingB(true);
+    try {
+      const isoEndTime = endTimeB
+        ? new Date(endTimeB).toISOString()
+        : undefined;
+      await toggleSelection(!isOpenB, isoEndTime, "B");
+      toast.success(
+        `Selection for Group B ${!isOpenB ? "opened" : "closed"} successfully.`,
+      );
+      setEndTimeB("");
+      onRefresh();
+    } catch (err) {
+      toast.error(err.error || "Failed to toggle");
+    } finally {
+      setTogglingB(false);
     }
   };
 
@@ -1788,13 +2150,15 @@ function SettingsTab({
     setImportResult(null);
     setPendingImport(null);
     try {
-      const result = await importStudents(file);
+      const result = await importStudents(file, importGroup);
       if ((result.duplicateCount ?? 0) > 0) {
         // Hold result — show warning panel instead of success
         setPendingImport(result);
       } else {
         setImportResult(result);
-        toast.success(`Imported ${result.importedCount} students!`);
+        toast.success(
+          `Imported ${result.importedCount} students to Group ${importGroup}!`,
+        );
         onRefresh();
       }
     } catch (err) {
@@ -1812,33 +2176,36 @@ function SettingsTab({
   const handleConfirmImport = () => {
     setImportResult(pendingImport);
     setPendingImport(null);
-    toast.success(`Imported ${pendingImport.importedCount} students!`);
+    toast.success(
+      `Imported ${pendingImport.importedCount} students to Group ${importGroup}!`,
+    );
     onRefresh();
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
+      {/* Group A Selection Window */}
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 font-display mb-1">
-          Selection Window
+          Group A Selection Window
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          Control when students can submit faculty selections.
+          Control when Group A students can submit faculty selections.
         </p>
 
         <div className="flex items-center gap-3 mb-5">
           <div
-            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOpen ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
+            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOpenA ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
           />
           <span className="text-sm font-medium text-slate-700">
-            Selection is currently{" "}
-            <strong className={isOpen ? "text-green-700" : "text-slate-600"}>
-              {isOpen ? "OPEN" : "CLOSED"}
+            Group A selection is currently{" "}
+            <strong className={isOpenA ? "text-green-700" : "text-slate-600"}>
+              {isOpenA ? "OPEN" : "CLOSED"}
             </strong>
           </span>
         </div>
 
-        {isOpen && realtimeEndTime && (
+        {isOpenA && stats?.config?.end_time_a && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1860,13 +2227,13 @@ function SettingsTab({
                 Scheduled to close at
               </p>
               <p className="text-sm text-amber-700 font-mono mt-0.5">
-                {savedEndTimeStr}
+                {savedEndTimeA}
               </p>
             </div>
           </motion.div>
         )}
 
-        {isOpen && !realtimeEndTime && (
+        {isOpenA && !stats?.config?.end_time_a && (
           <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             <svg
               className="w-4 h-4 text-green-600 flex-shrink-0"
@@ -1889,18 +2256,18 @@ function SettingsTab({
         <div className="space-y-3">
           <div>
             <label className="label">
-              {isOpen
+              {isOpenA
                 ? "Update End Time (optional)"
                 : "Set End Time (optional)"}
             </label>
             <input
               type="datetime-local"
-              className={`input-field ${endTimeError ? "border-red-400 focus:ring-red-400" : ""}`}
-              value={endTime}
+              className={`input-field ${endTimeErrorA ? "border-red-400 focus:ring-red-400" : ""}`}
+              value={endTimeA}
               min={minDateTime}
-              onChange={(e) => handleEndTimeChange(e.target.value)}
+              onChange={(e) => handleEndTimeChangeA(e.target.value)}
             />
-            {endTimeError && (
+            {endTimeErrorA && (
               <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                 <svg
                   className="w-3.5 h-3.5"
@@ -1912,13 +2279,13 @@ function SettingsTab({
                     clipRule="evenodd"
                   />
                 </svg>
-                {endTimeError}
+                {endTimeErrorA}
               </p>
             )}
-            {endTime && !endTimeError && (
+            {endTimeA && !endTimeErrorA && (
               <p className="text-xs text-green-600 mt-1">
                 ✓ Will close on{" "}
-                {new Date(endTime).toLocaleString("en-IN", {
+                {new Date(endTimeA).toLocaleString("en-IN", {
                   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                   day: "2-digit",
                   month: "short",
@@ -1931,19 +2298,151 @@ function SettingsTab({
             )}
           </div>
           <button
-            onClick={handleToggle}
-            disabled={toggling || !!endTimeError}
+            onClick={handleToggleA}
+            disabled={togglingA || !!endTimeErrorA}
             className={`w-full px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-              isOpen
+              isOpenA
                 ? "bg-red-600 hover:bg-red-700 text-white"
                 : "bg-green-600 hover:bg-green-700 text-white"
             } disabled:opacity-50 disabled:cursor-not-allowed`}>
-            {toggling ? (
+            {togglingA ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isOpen ? (
-              "Close Selection"
+            ) : isOpenA ? (
+              "Close Group A Selection"
             ) : (
-              "Open Selection"
+              "Open Group A Selection"
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Group B Selection Window */}
+      <div className="card p-5">
+        <h3 className="font-semibold text-slate-900 font-display mb-1">
+          Group B Selection Window
+        </h3>
+        <p className="text-sm text-slate-500 mb-4">
+          Control when Group B students can submit faculty selections.
+        </p>
+
+        <div className="flex items-center gap-3 mb-5">
+          <div
+            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOpenB ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
+          />
+          <span className="text-sm font-medium text-slate-700">
+            Group B selection is currently{" "}
+            <strong className={isOpenB ? "text-green-700" : "text-slate-600"}>
+              {isOpenB ? "OPEN" : "CLOSED"}
+            </strong>
+          </span>
+        </div>
+
+        {isOpenB && stats?.config?.end_time_b && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <svg
+              className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                Scheduled to close at
+              </p>
+              <p className="text-sm text-amber-700 font-mono mt-0.5">
+                {savedEndTimeB}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {isOpenB && !stats?.config?.end_time_b && (
+          <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+            <svg
+              className="w-4 h-4 text-green-600 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-sm text-green-700">
+              Open with no end time — closes only when you manually close it.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="label">
+              {isOpenB
+                ? "Update End Time (optional)"
+                : "Set End Time (optional)"}
+            </label>
+            <input
+              type="datetime-local"
+              className={`input-field ${endTimeErrorB ? "border-red-400 focus:ring-red-400" : ""}`}
+              value={endTimeB}
+              min={minDateTime}
+              onChange={(e) => handleEndTimeChangeB(e.target.value)}
+            />
+            {endTimeErrorB && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {endTimeErrorB}
+              </p>
+            )}
+            {endTimeB && !endTimeErrorB && (
+              <p className="text-xs text-green-600 mt-1">
+                ✓ Will close on{" "}
+                {new Date(endTimeB).toLocaleString("en-IN", {
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleToggleB}
+            disabled={togglingB || !!endTimeErrorB}
+            className={`w-full px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+              isOpenB
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-green-600 hover:bg-green-700 text-white"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}>
+            {togglingB ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isOpenB ? (
+              "Close Group B Selection"
+            ) : (
+              "Open Group B Selection"
             )}
           </button>
         </div>
@@ -2017,6 +2516,18 @@ function SettingsTab({
             | Name | PIN | DOB |
           </span>
         </p>
+        <div className="flex gap-3 mb-4">
+          <div>
+            <label className="label">Select Group</label>
+            <select
+              className="input-field"
+              value={importGroup}
+              onChange={(e) => setImportGroup(e.target.value)}>
+              <option value="A">Group A</option>
+              <option value="B">Group B</option>
+            </select>
+          </div>
+        </div>
         <label
           className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
           <svg
@@ -2127,46 +2638,99 @@ function SettingsTab({
         <p className="text-sm text-slate-500 mb-4">
           Download faculty selections as CSV.
         </p>
-        {/* Student-wise export */}
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="btn-secondary flex items-center gap-2 w-fit">
-            {isExporting ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                Export Student-wise CSV
-              </>
-            )}
-          </button>
+        {/* Group A Exports */}
+        <div className="mb-6">
+          <h4 className="font-medium text-slate-800 mb-3">Group A Export</h4>
+          <div className="flex flex-col gap-3">
+            <DownloadCSVButton
+              label="Student-wise CSV (Group A)"
+              onClick={() =>
+                downloadBlob(
+                  exportStudentWiseGroupA(),
+                  `student_wise_group_a_${formatteddate}.csv`,
+                )
+              }
+            />
+            <DownloadCSVButton
+              label="Faculty-wise CSV (Group A)"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyWiseGroupA(),
+                  `faculty_wise_group_a_${formatteddate}.csv`,
+                )
+              }
+            />
+          </div>
+        </div>
 
-          {/* Faculty-wise export — NEW */}
-          <DownloadCSVButton
-            label="Export Faculty-wise CSV"
-            onClick={() =>
-              downloadBlob(
-                exportFacultyCSV(),
-                `faculty_wise${formatteddate}.csv`,
-              )
-            }
-          />
+        {/* Group B Exports */}
+        <div className="mb-6">
+          <h4 className="font-medium text-slate-800 mb-3">Group B Export</h4>
+          <div className="flex flex-col gap-3">
+            <DownloadCSVButton
+              label="Student-wise CSV (Group B)"
+              onClick={() =>
+                downloadBlob(
+                  exportStudentWiseGroupB(),
+                  `student_wise_group_b_${formatteddate}.csv`,
+                )
+              }
+            />
+            <DownloadCSVButton
+              label="Faculty-wise CSV (Group B)"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyWiseGroupB(),
+                  `faculty_wise_group_b_${formatteddate}.csv`,
+                )
+              }
+            />
+          </div>
+        </div>
+
+        {/* All Groups Exports */}
+        <div>
+          <h4 className="font-medium text-slate-800 mb-3">All Groups Export</h4>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="btn-secondary flex items-center gap-2 w-fit">
+              {isExporting ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Export Student-wise CSV (All Groups)
+                </>
+              )}
+            </button>
+
+            {/* Faculty-wise export — NEW */}
+            <DownloadCSVButton
+              label="Export Faculty-wise CSV (All Groups)"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyCSV(),
+                  `faculty_wise${formatteddate}.csv`,
+                )
+              }
+            />
+          </div>
         </div>
       </div>
 
@@ -2217,6 +2781,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [error, setError] = useState(null);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -2228,29 +2794,86 @@ export default function AdminDashboard() {
     selectionOpen: realtimeSelectionOpen,
   } = useRealtimeConfig();
 
-  const mergedStats = stats
-    ? {
-        ...stats,
-        faculty: realtimeFaculty.length > 0 ? realtimeFaculty : stats.faculty,
-        subjects:
-          realtimeSubjects.length > 0 ? realtimeSubjects : stats.subjects,
-        config: realtimeConfig ?? stats.config,
-        subjectBreakdown: (realtimeSubjects.length > 0
-          ? realtimeSubjects
-          : stats.subjects || []
-        ).map((sub) => {
-          const subFaculty = (
-            realtimeFaculty.length > 0 ? realtimeFaculty : stats.faculty || []
-          ).filter((f) => f.subject_id === sub.id);
-          return {
-            subject: sub,
-            faculty: subFaculty,
-            totalSeats: subFaculty.reduce((a, f) => a + f.max_limit, 0),
-            filledSeats: subFaculty.reduce((a, f) => a + f.current_count, 0),
-          };
-        }),
-      }
-    : null;
+  const mergedStats = useMemo(() => {
+    if (!stats) return null;
+
+    // 1. Consolidate initial faculty from both groups in the fetched stats
+    const initialFaculty = [
+      ...(stats.groupA?.faculty || []),
+      ...(stats.groupB?.faculty || []),
+    ];
+
+    // 2. Merge initial faculty with real-time faculty updates
+    const finalFaculty =
+      realtimeFaculty.length > 0
+        ? realtimeFaculty.map((realtimeF) => {
+            const statsF = initialFaculty.find((f) => f.id === realtimeF.id);
+            return {
+              ...realtimeF,
+              current_count:
+                statsF?.current_count ?? realtimeF.current_count ?? 0,
+            };
+          })
+        : initialFaculty; // If no real-time faculty, use the initial fetched faculty
+
+    // 3. Determine the final list of subjects (from real-time or initial fetch)
+    const finalSubjects =
+      realtimeSubjects.length > 0 ? realtimeSubjects : stats.subjects || [];
+
+    // 4. Filter faculty by group based on the finalFaculty list
+    const groupAFaculty = finalFaculty.filter((f) => f.group === "A");
+    const groupBFaculty = finalFaculty.filter((f) => f.group === "B");
+
+    // 5. Re-calculate subject breakdown for each group using the filtered faculty
+    const subjectBreakdownA = finalSubjects.map((sub) => {
+      const subFaculty = groupAFaculty.filter((f) => f.subject_id === sub.id);
+      return {
+        subject: sub,
+        faculty: subFaculty,
+        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
+        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
+      };
+    });
+
+    const subjectBreakdownB = finalSubjects.map((sub) => {
+      const subFaculty = groupBFaculty.filter((f) => f.subject_id === sub.id);
+      return {
+        subject: sub,
+        faculty: subFaculty,
+        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
+        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
+      };
+    });
+
+    // 6. Calculate overall subject breakdown using the finalFaculty list
+    const overallSubjectBreakdown = finalSubjects.map((sub) => {
+      const subFaculty = finalFaculty.filter((f) => f.subject_id === sub.id);
+      return {
+        subject: sub,
+        faculty: subFaculty,
+        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
+        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
+      };
+    });
+
+    return {
+      ...stats, // Spread original stats to retain other properties (totalStudents, submittedStudents, etc.)
+      faculty: finalFaculty, // Provide a consolidated faculty array for other tabs
+      subjects: finalSubjects,
+      config: realtimeConfig ?? stats.config,
+      groupA: {
+        ...stats.groupA,
+        faculty: groupAFaculty,
+        subjectBreakdown: subjectBreakdownA,
+      },
+      groupB: {
+        ...stats.groupB,
+        faculty: groupBFaculty,
+        subjectBreakdown: subjectBreakdownB,
+      },
+      subjectBreakdown: overallSubjectBreakdown, // Use the overall breakdown
+    };
+  }, [stats, realtimeFaculty, realtimeSubjects, realtimeConfig]);
 
   const [sessionWarning, setSessionWarning] = useState(false);
   const authErrorCount = useRef(0);
@@ -2280,6 +2903,8 @@ export default function AdminDashboard() {
       authErrorCount.current = 0;
       setStats(data);
       setLastUpdated(new Date());
+      setRefreshTrigger((prev) => prev + 1);
+      setError(null);
     } catch (err) {
       if (
         err.code === "UNAUTHORIZED" ||
@@ -2298,6 +2923,9 @@ export default function AdminDashboard() {
         }
       } else {
         console.warn("fetchStats failed (non-auth):", err.message || err.error);
+        setError(
+          "Failed to load dashboard data. Please check your connection.",
+        );
       }
     }
   }, [logout, navigate]);
@@ -2457,14 +3085,21 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}>
-            {activeTab === "Dashboard" && <DashboardTab stats={mergedStats} />}
+            {activeTab === "Dashboard" && (
+              <DashboardTab stats={mergedStats} error={error} />
+            )}
             {activeTab === "Subjects" && (
               <SubjectsTab stats={mergedStats} onRefresh={fetchStats} />
             )}
             {activeTab === "Faculty" && (
               <FacultyTab stats={mergedStats} onRefresh={fetchStats} />
             )}
-            {activeTab === "Students" && <StudentsTab onRefresh={fetchStats} />}
+            {activeTab === "Students" && (
+              <StudentsTab
+                onRefresh={fetchStats}
+                refreshTrigger={refreshTrigger}
+              />
+            )}
             {activeTab === "Settings" && (
               <SettingsTab
                 stats={mergedStats}
