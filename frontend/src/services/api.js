@@ -168,6 +168,22 @@ export const exportFacultyWiseGroupB = () => {
   }).then((res) => res.blob());
 };
 
+// New: Export faculty list for Group A (Name, Subject, Max Seats, Seats Filled)
+export const exportFacultyListGroupA = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-faculty-list-group-a`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
+// New: Export faculty list for Group B (Name, Subject, Max Seats, Seats Filled)
+export const exportFacultyListGroupB = () => {
+  const token = getToken();
+  return fetch(`${BASE_URL}/admin/export-faculty-list-group-b`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.blob());
+};
+
 export const importStudents = (file, group) => {
   const token = getToken();
   const formData = new FormData();

@@ -32,6 +32,8 @@ import {
   importStudents,
   exportStudentWiseGroupA,
   exportStudentWiseGroupB,
+  exportFacultyListGroupA, // New import for faculty list export
+  exportFacultyListGroupB, // New import for faculty list export
   resetFacultyByGroup,
   exportFacultyWiseGroupA,
   exportFacultyWiseGroupB,
@@ -399,7 +401,7 @@ function DashboardTab({ stats, error }) {
       ...groupData,
     };
     return (
-      <div className="space-y-4">
+      <>
         <h3 className="font-semibold text-slate-900 font-display text-lg">
           Group {groupName} Dashboard
         </h3>
@@ -585,7 +587,7 @@ function DashboardTab({ stats, error }) {
             </p>
           </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -1247,6 +1249,7 @@ function FacultyTab({ stats, onRefresh }) {
               <DownloadCSVButton
                 label="Download CSV"
                 onClick={() =>
+                  // Existing export for detailed selections
                   downloadBlob(
                     exportFacultyWiseGroupA(),
                     `faculty_group_a_${Date.now()}.csv`,
@@ -1436,6 +1439,7 @@ function FacultyTab({ stats, onRefresh }) {
               <DownloadCSVButton
                 label="Download CSV"
                 onClick={() =>
+                  // Existing export for detailed selections
                   downloadBlob(
                     exportFacultyWiseGroupB(),
                     `faculty_group_b_${Date.now()}.csv`,
@@ -1765,7 +1769,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   ];
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1871,7 +1875,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
             </div>
           </div>
         </div>
-        {/* Removed the !sorted.length check here to allow group-specific empty states */}
+
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-6 h-6 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -1984,6 +1988,27 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                   </table>
                 </div>
               )}
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <p className="text-xs text-slate-400">
+                  Showing{" "}
+                  <span className="font-semibold text-slate-600">
+                    {studentsA.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-600">{total}</span>{" "}
+                  students in Group A
+                  {search && <span className="ml-1">(filtered)</span>}
+                </p>
+                {sortKey && (
+                  <p className="text-xs text-slate-400">
+                    Sorted by{" "}
+                    <span className="font-medium text-slate-600">
+                      {sortKey}
+                    </span>{" "}
+                    ({sortDir === "asc" ? "A→Z" : "Z→A"})
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Group B Students Table */}
@@ -2074,36 +2099,30 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                   </table>
                 </div>
               )}
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <p className="text-xs text-slate-400">
+                  Showing{" "}
+                  <span className="font-semibold text-slate-600">
+                    {studentsB.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-600">{total}</span>{" "}
+                  students in Group B
+                  {search && <span className="ml-1">(filtered)</span>}
+                </p>
+                {sortKey && (
+                  <p className="text-xs text-slate-400">
+                    Sorted by{" "}
+                    <span className="font-medium text-slate-600">
+                      {sortKey}
+                    </span>{" "}
+                    ({sortDir === "asc" ? "A→Z" : "Z→A"})
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
-
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-          <p className="text-xs text-slate-400">
-            Showing{" "}
-            <span className="font-semibold text-slate-600">
-              {sorted.length}
-            </span>{" "}
-            of <span className="font-semibold text-slate-600">{total}</span>{" "}
-            students
-            {search && <span className="ml-1">(filtered)</span>}
-          </p>
-          {sortKey && (
-            <p className="text-xs text-slate-400">
-              Sorted by{" "}
-              <span className="font-medium text-slate-600">{sortKey}</span> (
-              {sortDir === "asc" ? "A→Z" : "Z→A"})
-              <button
-                onClick={() => {
-                  setSortKey("pin");
-                  setSortDir("asc");
-                }}
-                className="ml-2 text-primary-500 hover:underline">
-                Reset
-              </button>
-            </p>
-          )}
-        </div>
       </div>
 
       <ConfirmModal
@@ -2127,10 +2146,9 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
         onCancel={() => setShowResetConfirm(false)}
         loading={resetting}
       />
-    </div>
+    </>
   );
 }
-
 // ── Admin Countdown ───────────────────────────────────────────
 function AdminCountdown({ endTime, selectionOpen }) {
   const [timeLeft, setTimeLeft] = React.useState(null);

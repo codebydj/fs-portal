@@ -752,3 +752,97 @@ exports.exportFacultyWiseGroupB = async (req, res) => {
       .json({ error: "Server error", code: "SERVER_ERROR" });
   }
 };
+
+// Export faculty list for Group A (Name, Subject, Max Seats, Seats Filled)
+exports.exportFacultyListGroupA = async (req, res) => {
+  try {
+    const [facultySnap, subjectsSnap] = await Promise.all([
+      db.collection("faculty").where("group", "==", "A").get(),
+      db.collection("subjects").get(),
+    ]);
+
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjectsMap[d.id] = d.data();
+    });
+
+    const rows = [
+      ["Faculty Name", "Subject", "Max Seats", "Seats Filled", "Group"],
+    ];
+
+    facultySnap.docs.forEach((d) => {
+      const f = d.data();
+      const subject = subjectsMap[f.subject_id] || {};
+      rows.push([
+        f.name || "",
+        subject.name || "Unknown",
+        f.max_limit || 0,
+        f.current_count || 0,
+        f.group || "A",
+      ]);
+    });
+
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="faculty_list_group_a_${Date.now()}.csv"`,
+    );
+    return res.status(200).send(csv);
+  } catch (err) {
+    console.error("exportFacultyListGroupA error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};
+
+// Export faculty list for Group B (Name, Subject, Max Seats, Seats Filled)
+exports.exportFacultyListGroupB = async (req, res) => {
+  try {
+    const [facultySnap, subjectsSnap] = await Promise.all([
+      db.collection("faculty").where("group", "==", "B").get(),
+      db.collection("subjects").get(),
+    ]);
+
+    const subjectsMap = {};
+    subjectsSnap.docs.forEach((d) => {
+      subjectsMap[d.id] = d.data();
+    });
+
+    const rows = [
+      ["Faculty Name", "Subject", "Max Seats", "Seats Filled", "Group"],
+    ];
+
+    facultySnap.docs.forEach((d) => {
+      const f = d.data();
+      const subject = subjectsMap[f.subject_id] || {};
+      rows.push([
+        f.name || "",
+        subject.name || "Unknown",
+        f.max_limit || 0,
+        f.current_count || 0,
+        f.group || "B",
+      ]);
+    });
+
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="faculty_list_group_b_${Date.now()}.csv"`,
+    );
+    return res.status(200).send(csv);
+  } catch (err) {
+    console.error("exportFacultyListGroupB error:", err);
+    return res
+      .status(500)
+      .json({ error: "Server error", code: "SERVER_ERROR" });
+  }
+};

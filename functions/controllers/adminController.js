@@ -109,7 +109,7 @@ exports.addFaculty = async (req, res) => {
     const ref = await db.collection("faculty").add({
       name: name.trim(),
       subject_id,
-      experience: experience ? Number(experience) : null,
+      // experience: experience ? Number(experience) : null, // Removed as per frontend
       max_limit: Number(max_limit),
       group,
       current_count: 0,
@@ -149,13 +149,19 @@ exports.resetFacultyByGroup = async (req, res) => {
       });
     }
 
-    const facultySnap = await db.collection("faculty").where("group", "==", group).get();
+    const facultySnap = await db
+      .collection("faculty")
+      .where("group", "==", group)
+      .get();
     const batch = db.batch();
     facultySnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
     return res
       .status(200)
-      .json({ success: true, message: `All faculty for Group ${group} deleted` });
+      .json({
+        success: true,
+        message: `All faculty for Group ${group} deleted`,
+      });
   } catch (err) {
     console.error(err);
     return res
@@ -770,8 +776,8 @@ exports.editFaculty = async (req, res) => {
       .doc(id)
       .update({
         name: name.trim(),
-        subject_id,
-        experience: experience ? Number(experience) : null,
+        subject_id, // Ensure subject_id is updated
+        // experience: experience ? Number(experience) : null, // Removed as per frontend
         max_limit: Number(max_limit),
         group,
       });
