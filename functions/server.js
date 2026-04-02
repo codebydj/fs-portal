@@ -122,6 +122,16 @@ app.get(
   verifyAdmin,
   exportFacultyWiseGroupB,
 );
+app.get(
+  "/admin/export-faculty-list-group-a",
+  verifyAdmin,
+  require("./controllers/exportController").exportFacultyListGroupA,
+);
+app.get(
+  "/admin/export-faculty-list-group-b",
+  verifyAdmin,
+  require("./controllers/exportController").exportFacultyListGroupB,
+);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () =>

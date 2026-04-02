@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { db } from "../../services/firebase";
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
@@ -124,6 +124,146 @@ const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
   );
 });
 
+const AlreadySubmittedModal = ({
+  selections,
+  user,
+  onClose,
+  onDownloadJpg,
+}) => {
+  // Get submission time from selections (handling Firestore timestamp objects or serialized timestamps)
+  const parseTimestamp = (timestamp) => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp._seconds) return new Date(timestamp._seconds * 1000);
+    if (timestamp instanceof Date) return timestamp;
+    return null;
+  };
+
+  const submissionTime = (() => {
+    const candidate = selections?.[0]?.timestamp;
+    const parsed = parseTimestamp(candidate);
+    return parsed
+      ? parsed.toLocaleString("en-IN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "—";
+  })();
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-2xl bg-white rounded-2xl shadow-modal overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-end justify-end gap-3">
+           
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors flex-shrink-0">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div className="px-6 py-4 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <h4 className="text-lg font-semibold text-green-800">
+              Submitted Successfully
+            </h4>
+            <p className="text-green-600 mt-2">
+              Your faculty selection has already been submitted and is now
+              locked.
+            </p>
+            <p className="text-lg font-sans font-bold text-slate-500 mt-2.5">
+              {user?.name} ({user?.pin})
+            </p>
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Group: {user?.group || "A"}
+              </span>
+            <p className="text-slate-500 text-sm mt-3">
+              Submitted on {submissionTime}
+            </p>
+          </div>
+
+          <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+            <button onClick={onClose} className="btn-secondary">
+              Close
+            </button>
+            <button
+              onClick={onDownloadJpg}
+              className="btn-primary flex items-center gap-2">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Download JPG
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
   const { selectionOpen, expired, configLoaded } = useCountdown(
@@ -138,6 +278,8 @@ export default function StudentDashboard() {
   const [previousSelections, setPreviousSelections] = useState(null);
   const selectionsRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
+  const [showAlreadySubmittedModal, setShowAlreadySubmittedModal] =
+    useState(false);
 
   const isSubmitted = user?.has_submitted;
   // Wait for config to load before deciding if selection is closed
@@ -173,6 +315,13 @@ export default function StudentDashboard() {
     }
   }, [isSubmitted]);
 
+  // Show modal when previous selections are loaded and student has submitted
+  useEffect(() => {
+    if (isSubmitted && previousSelections && previousSelections.length > 0) {
+      setShowAlreadySubmittedModal(true);
+    }
+  }, [isSubmitted, previousSelections]);
+
   const handleSelect = (subjectId, facultyId) => {
     if (isSubmitted || isSelectionClosed) return;
     setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
@@ -190,10 +339,15 @@ export default function StudentDashboard() {
       );
       await submitSelection(payload);
       // Save submitted selections for display
+      const timestamp = {
+        _seconds: Math.floor(Date.now() / 1000),
+        _nanoseconds: 0,
+      };
       const selectionData = payload.map(({ subject_id, faculty_id }) => ({
         subject_id,
         faculty_id,
         pin: user.pin,
+        timestamp,
       }));
       localStorage.setItem(
         "previous_selections",
@@ -544,6 +698,15 @@ export default function StudentDashboard() {
         onCancel={() => setShowConfirm(false)}
         loading={submitting}
       />
+
+      {showAlreadySubmittedModal && (
+        <AlreadySubmittedModal
+          selections={previousSelections}
+          user={user}
+          onClose={() => setShowAlreadySubmittedModal(false)}
+          onDownloadJpg={handleDownloadJpg}
+        />
+      )}
 
       <Footer />
     </div>

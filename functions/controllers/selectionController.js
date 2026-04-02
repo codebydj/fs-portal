@@ -16,12 +16,10 @@ exports.submitSelection = async (req, res) => {
     // Check selection window using server time
     const configSnap = await db.collection("settings").doc("config").get();
     if (!configSnap.exists) {
-      return res
-        .status(403)
-        .json({
-          error: "Selection configuration not found",
-          code: "SELECTION_CLOSED",
-        });
+      return res.status(403).json({
+        error: "Selection configuration not found",
+        code: "SELECTION_CLOSED",
+      });
     }
 
     const config = configSnap.data();
@@ -46,21 +44,17 @@ exports.submitSelection = async (req, res) => {
     const groupEndTime = config[groupEndTimeKey] || null;
 
     if (!groupSelectionOpen) {
-      return res
-        .status(403)
-        .json({
-          error: "Faculty selection is currently closed",
-          code: "SELECTION_CLOSED",
-        });
+      return res.status(403).json({
+        error: "Faculty selection is currently closed",
+        code: "SELECTION_CLOSED",
+      });
     }
 
     if (groupEndTime && groupEndTime.toMillis() < now.toMillis()) {
-      return res
-        .status(403)
-        .json({
-          error: "Faculty selection window has expired",
-          code: "SELECTION_CLOSED",
-        });
+      return res.status(403).json({
+        error: "Faculty selection window has expired",
+        code: "SELECTION_CLOSED",
+      });
     }
 
     // Validate all subjects are covered
@@ -69,34 +63,28 @@ exports.submitSelection = async (req, res) => {
     const selectedSubjectIds = selections.map((s) => s.subject_id);
 
     if (allSubjectIds.length !== selectedSubjectIds.length) {
-      return res
-        .status(400)
-        .json({
-          error: "You must select faculty for all subjects",
-          code: "INCOMPLETE_SELECTION",
-        });
+      return res.status(400).json({
+        error: "You must select faculty for all subjects",
+        code: "INCOMPLETE_SELECTION",
+      });
     }
 
     const missingSubjects = allSubjectIds.filter(
       (id) => !selectedSubjectIds.includes(id),
     );
     if (missingSubjects.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "You must select faculty for all subjects",
-          code: "INCOMPLETE_SELECTION",
-        });
+      return res.status(400).json({
+        error: "You must select faculty for all subjects",
+        code: "INCOMPLETE_SELECTION",
+      });
     }
 
     const uniqueSubjects = new Set(selectedSubjectIds);
     if (uniqueSubjects.size !== selectedSubjectIds.length) {
-      return res
-        .status(400)
-        .json({
-          error: "Duplicate subject selections found",
-          code: "INVALID_REQUEST",
-        });
+      return res.status(400).json({
+        error: "Duplicate subject selections found",
+        code: "INVALID_REQUEST",
+      });
     }
 
     // Custom error class so code property survives Firestore transaction wrapper
@@ -177,16 +165,17 @@ exports.submitSelection = async (req, res) => {
         });
       }
 
-      // 6. Mark student as submitted
-      transaction.update(studentRef, { has_submitted: true });
+      // 6. Mark student as submitted and store submission timestamp
+      transaction.update(studentRef, {
+        has_submitted: true,
+        submitted_at: now,
+      });
     });
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Faculty selection submitted successfully",
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Faculty selection submitted successfully",
+    });
   } catch (err) {
     console.error("Submit selection error:", err);
 

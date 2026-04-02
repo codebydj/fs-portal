@@ -33,8 +33,8 @@ import {
   exportStudentWiseGroupA,
   exportStudentWiseGroupB,
   resetFacultyByGroup,
-  exportFacultyWiseGroupA,
-  exportFacultyWiseGroupB,
+  exportFacultyListGroupA,
+  exportFacultyListGroupB,
 } from "../../services/api";
 import {
   useRealtimeFaculty,
@@ -1272,17 +1272,17 @@ function FacultyTab({ stats, onRefresh }) {
                 <DownloadCSVButton
                   label="Download CSV"
                   onClick={() =>
-                    // Existing export for detailed selections
+                    // Export faculty list with subject and seats
                     downloadBlob(
-                      exportFacultyWiseGroupA(),
-                      `faculty_group_a_${Date.now()}.csv`,
+                      exportFacultyListGroupA(),
+                      `faculty_list_group_a_${Date.now()}.csv`,
                     )
                   }
                 />
                 {facultyA.length > 0 && (
                   <button
                     onClick={() => setShowResetGroupAConfirm(true)}
-                    className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                    className="text-xs text-red-600 border border-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
                     Delete All Group A Faculty
                   </button>
                 )}
@@ -1488,17 +1488,17 @@ function FacultyTab({ stats, onRefresh }) {
                 <DownloadCSVButton
                   label="Download CSV"
                   onClick={() =>
-                    // Existing export for detailed selections
+                    // Export faculty list with subject and seats
                     downloadBlob(
-                      exportFacultyWiseGroupB(),
-                      `faculty_group_b_${Date.now()}.csv`,
+                      exportFacultyListGroupB(),
+                      `faculty_list_group_b_${Date.now()}.csv`,
                     )
                   }
                 />
                 {facultyB.length > 0 && (
                   <button
                     onClick={() => setShowResetGroupBConfirm(true)}
-                    className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                    className="text-xs text-red-600 border border-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
                     Delete All Group B Faculty
                   </button>
                 )}
@@ -1765,6 +1765,14 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, refreshTrigger]);
 
+  const parseSubmittedAt = (timestamp) => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp._seconds) return new Date(timestamp._seconds * 1000);
+    if (timestamp instanceof Date) return timestamp;
+    return null;
+  };
+
   const handleSort = (key) => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1819,10 +1827,17 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   const sorted = [...filtered].sort((a, b) => {
     let aVal = a[sortKey] ?? "";
     let bVal = b[sortKey] ?? "";
+
     if (sortKey === "has_submitted") {
       aVal = a.has_submitted ? 1 : 0;
       bVal = b.has_submitted ? 1 : 0;
     }
+
+    if (sortKey === "submitted_at") {
+      aVal = parseSubmittedAt(a.submitted_at) || new Date(0);
+      bVal = parseSubmittedAt(b.submitted_at) || new Date(0);
+    }
+
     if (typeof aVal === "string") aVal = aVal.toLowerCase();
     if (typeof bVal === "string") bVal = bVal.toLowerCase();
     if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
@@ -1839,6 +1854,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
     { key: "branch", label: "Branch" },
     { key: "year", label: "Year" },
     { key: "has_submitted", label: "Status" },
+    { key: "submitted_at", label: "Submitted At" },
   ];
 
   return (
@@ -2081,6 +2097,20 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                                     </span>
                                   )}
                                 </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.submitted_at
+                                    ? parseSubmittedAt(
+                                        s.submitted_at,
+                                      )?.toLocaleString("en-IN", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                      })
+                                    : "—"}
+                                </td>
                                 <td className="px-5 py-3 text-right">
                                   <button
                                     onClick={() => setDeletePin(s.pin)}
@@ -2096,7 +2126,6 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </div>
                   )}
                   <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                   
                     {sortKey && (
                       <p className="text-xs text-slate-400">
                         Sorted by{" "}
@@ -2211,6 +2240,20 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                                     </span>
                                   )}
                                 </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.submitted_at
+                                    ? parseSubmittedAt(
+                                        s.submitted_at,
+                                      )?.toLocaleString("en-IN", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                      })
+                                    : "—"}
+                                </td>
                                 <td className="px-5 py-3 text-right">
                                   <button
                                     onClick={() => setDeletePin(s.pin)}
@@ -2226,7 +2269,6 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </div>
                   )}
                   <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                  
                     {sortKey && (
                       <p className="text-xs text-slate-400">
                         Sorted by{" "}
@@ -2906,7 +2948,7 @@ function SettingsTab({
         </p>
         <div className="space-y-4">
           <div>
-            <label className="label">Group A: Upload Group A Excel File</label>
+            <label className="label font">Group A: </label>
             <label
               className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingA ? "opacity-50 cursor-not-allowed" : ""}`}>
               <svg
@@ -2932,7 +2974,7 @@ function SettingsTab({
             </label>
           </div>
           <div>
-            <label className="label">Group B: Upload Group B Excel File</label>
+            <label className="label font">Group B: </label>
             <label
               className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingB ? "opacity-50 cursor-not-allowed" : ""}`}>
               <svg
@@ -3059,11 +3101,11 @@ function SettingsTab({
               }
             />
             <DownloadCSVButton
-              label="Faculty-wise CSV (Group A)"
+              label="Faculty list CSV (Group A)"
               onClick={() =>
                 downloadBlob(
-                  exportFacultyWiseGroupA(),
-                  `faculty_wise_group_a_${formatteddate}.csv`,
+                  exportFacultyListGroupA(),
+                  `faculty_list_group_a_${formatteddate}.csv`,
                 )
               }
             />
@@ -3084,11 +3126,11 @@ function SettingsTab({
               }
             />
             <DownloadCSVButton
-              label="Faculty-wise CSV (Group B)"
+              label="Faculty list CSV (Group B)"
               onClick={() =>
                 downloadBlob(
-                  exportFacultyWiseGroupB(),
-                  `faculty_wise_group_b_${formatteddate}.csv`,
+                  exportFacultyListGroupB(),
+                  `faculty_list_group_b_${formatteddate}.csv`,
                 )
               }
             />
