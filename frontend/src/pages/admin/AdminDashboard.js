@@ -977,6 +977,10 @@ function FacultyTab({ stats, onRefresh }) {
 
   const [sortKey, setSortKey] = useState("name"); // Default sort key
   const [sortDir, setSortDir] = useState("asc"); // Default sort direction
+  const [collapsedFacultyTables, setCollapsedFacultyTables] = useState({
+    A: false,
+    B: false,
+  });
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -1240,186 +1244,212 @@ function FacultyTab({ stats, onRefresh }) {
           className="card overflow-hidden"
           key={`faculty-a-${facultyA.length}`}>
           <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
-            <h3 className="font-semibold text-slate-900 font-display">
-              Group A Faculty ({facultyA.length})
-            </h3>
-            <div className="flex items-center gap-2">
-              <DownloadCSVButton
-                label="Download CSV"
+            <div className="flex items-center justify-between w-full">
+              <h3 className="font-semibold text-slate-900 font-display">
+                Group A Faculty ({facultyA.length})
+              </h3>
+              <button
                 onClick={() =>
-                  // Existing export for detailed selections
-                  downloadBlob(
-                    exportFacultyWiseGroupA(),
-                    `faculty_group_a_${Date.now()}.csv`,
-                  )
+                  setCollapsedFacultyTables((prev) => ({ ...prev, A: !prev.A }))
                 }
-              />
-              {facultyA.length > 0 && (
-                <button
-                  onClick={() => setShowResetGroupAConfirm(true)}
-                  className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                  Delete All Group A Faculty
-                </button>
-              )}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+                <svg
+                  className={`w-5 h-5 transform transition-transform ${collapsedFacultyTables.A ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
             </div>
+            {!collapsedFacultyTables.A && (
+              <div className="flex items-center gap-2 w-full mt-3">
+                <DownloadCSVButton
+                  label="Download CSV"
+                  onClick={() =>
+                    // Existing export for detailed selections
+                    downloadBlob(
+                      exportFacultyWiseGroupA(),
+                      `faculty_group_a_${Date.now()}.csv`,
+                    )
+                  }
+                />
+                {facultyA.length > 0 && (
+                  <button
+                    onClick={() => setShowResetGroupAConfirm(true)}
+                    className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                    Delete All Group A Faculty
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          {!facultyA.length ? (
-            <div className="py-10 text-center text-slate-400 text-sm">
-              No faculty found for Group A with current filters.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("name")}>
-                      <span className="flex items-center gap-1">
-                        Name
-                        <SortIcon
-                          column="name"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("subject")}>
-                      <span className="flex items-center gap-1">
-                        Subject
-                        <SortIcon
-                          column="subject"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("seats")}>
-                      <span className="flex items-center gap-1">
-                        Seats
-                        <SortIcon
-                          column="seats"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {facultyA.map((f) => {
-                    const subject = stats?.subjects?.find(
-                      (s) => s.id === f.subject_id,
-                    );
-                    const isEditing = editingId === f.id;
-                    return (
-                      <tr
-                        key={f.id}
-                        className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <input
-                              className="input-field py-1 text-sm w-36"
-                              value={editForm.name}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  name: e.target.value,
-                                }))
-                              }
+          {!collapsedFacultyTables.A && (
+            <>
+              {!facultyA.length ? (
+                <div className="py-10 text-center text-slate-400 text-sm">
+                  No faculty found for Group A with current filters.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("name")}>
+                          <span className="flex items-center gap-1">
+                            Name
+                            <SortIcon
+                              column="name"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
                             />
-                          ) : (
-                            <span className="font-medium text-slate-800">
-                              {f.name}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <select
-                              className="input-field py-1 text-sm"
-                              value={editForm.subject_id}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  subject_id: e.target.value,
-                                }))
-                              }>
-                              {stats?.subjects?.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-slate-600">
-                              {subject?.name || "—"}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              className="input-field py-1 text-sm w-20"
-                              value={editForm.max_limit}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  max_limit: e.target.value,
-                                }))
-                              }
+                          </span>
+                        </th>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("subject")}>
+                          <span className="flex items-center gap-1">
+                            Subject
+                            <SortIcon
+                              column="subject"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
                             />
-                          ) : (
-                            <span
-                              className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
-                              {f.current_count}/{f.max_limit}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEdit(f.id)}
-                                disabled={editLoading}
-                                className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
-                                {editLoading ? "..." : "Save"}
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => startEdit(f)}
-                                className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setDeleteId(f.id)}
-                                className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </td>
+                          </span>
+                        </th>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("seats")}>
+                          <span className="flex items-center gap-1">
+                            Seats
+                            <SortIcon
+                              column="seats"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
+                            />
+                          </span>
+                        </th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {facultyA.map((f) => {
+                        const subject = stats?.subjects?.find(
+                          (s) => s.id === f.subject_id,
+                        );
+                        const isEditing = editingId === f.id;
+                        return (
+                          <tr
+                            key={f.id}
+                            className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <input
+                                  className="input-field py-1 text-sm w-36"
+                                  value={editForm.name}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      name: e.target.value,
+                                    }))
+                                  }
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-800">
+                                  {f.name}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <select
+                                  className="input-field py-1 text-sm"
+                                  value={editForm.subject_id}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      subject_id: e.target.value,
+                                    }))
+                                  }>
+                                  {stats?.subjects?.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-slate-600">
+                                  {subject?.name || "—"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  className="input-field py-1 text-sm w-20"
+                                  value={editForm.max_limit}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      max_limit: e.target.value,
+                                    }))
+                                  }
+                                />
+                              ) : (
+                                <span
+                                  className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
+                                  {f.current_count}/{f.max_limit}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEdit(f.id)}
+                                    disabled={editLoading}
+                                    className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
+                                    {editLoading ? "..." : "Save"}
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => startEdit(f)}
+                                    className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteId(f.id)}
+                                    className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1430,186 +1460,212 @@ function FacultyTab({ stats, onRefresh }) {
           className="card overflow-hidden"
           key={`faculty-b-${facultyB.length}`}>
           <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
-            <h3 className="font-semibold text-slate-900 font-display">
-              Group B Faculty ({facultyB.length})
-            </h3>
-            <div className="flex items-center gap-2">
-              <DownloadCSVButton
-                label="Download CSV"
+            <div className="flex items-center justify-between w-full">
+              <h3 className="font-semibold text-slate-900 font-display">
+                Group B Faculty ({facultyB.length})
+              </h3>
+              <button
                 onClick={() =>
-                  // Existing export for detailed selections
-                  downloadBlob(
-                    exportFacultyWiseGroupB(),
-                    `faculty_group_b_${Date.now()}.csv`,
-                  )
+                  setCollapsedFacultyTables((prev) => ({ ...prev, B: !prev.B }))
                 }
-              />
-              {facultyB.length > 0 && (
-                <button
-                  onClick={() => setShowResetGroupBConfirm(true)}
-                  className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                  Delete All Group B Faculty
-                </button>
-              )}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+                <svg
+                  className={`w-5 h-5 transform transition-transform ${collapsedFacultyTables.B ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
             </div>
+            {!collapsedFacultyTables.B && (
+              <div className="flex items-center gap-2 w-full mt-3">
+                <DownloadCSVButton
+                  label="Download CSV"
+                  onClick={() =>
+                    // Existing export for detailed selections
+                    downloadBlob(
+                      exportFacultyWiseGroupB(),
+                      `faculty_group_b_${Date.now()}.csv`,
+                    )
+                  }
+                />
+                {facultyB.length > 0 && (
+                  <button
+                    onClick={() => setShowResetGroupBConfirm(true)}
+                    className="text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                    Delete All Group B Faculty
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          {!facultyB.length ? (
-            <div className="py-10 text-center text-slate-400 text-sm">
-              No faculty found for Group B with current filters.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("name")}>
-                      <span className="flex items-center gap-1">
-                        Name
-                        <SortIcon
-                          column="name"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("subject")}>
-                      <span className="flex items-center gap-1">
-                        Subject
-                        <SortIcon
-                          column="subject"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                      onClick={() => handleSort("seats")}>
-                      <span className="flex items-center gap-1">
-                        Seats
-                        <SortIcon
-                          column="seats"
-                          sortKey={sortKey}
-                          sortDir={sortDir}
-                        />
-                      </span>
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {facultyB.map((f) => {
-                    const subject = stats?.subjects?.find(
-                      (s) => s.id === f.subject_id,
-                    );
-                    const isEditing = editingId === f.id;
-                    return (
-                      <tr
-                        key={f.id}
-                        className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <input
-                              className="input-field py-1 text-sm w-36"
-                              value={editForm.name}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  name: e.target.value,
-                                }))
-                              }
+          {!collapsedFacultyTables.B && (
+            <>
+              {!facultyB.length ? (
+                <div className="py-10 text-center text-slate-400 text-sm">
+                  No faculty found for Group B with current filters.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("name")}>
+                          <span className="flex items-center gap-1">
+                            Name
+                            <SortIcon
+                              column="name"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
                             />
-                          ) : (
-                            <span className="font-medium text-slate-800">
-                              {f.name}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <select
-                              className="input-field py-1 text-sm"
-                              value={editForm.subject_id}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  subject_id: e.target.value,
-                                }))
-                              }>
-                              {stats?.subjects?.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-slate-600">
-                              {subject?.name || "—"}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              className="input-field py-1 text-sm w-20"
-                              value={editForm.max_limit}
-                              onChange={(e) =>
-                                setEditForm((p) => ({
-                                  ...p,
-                                  max_limit: e.target.value,
-                                }))
-                              }
+                          </span>
+                        </th>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("subject")}>
+                          <span className="flex items-center gap-1">
+                            Subject
+                            <SortIcon
+                              column="subject"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
                             />
-                          ) : (
-                            <span
-                              className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
-                              {f.current_count}/{f.max_limit}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isEditing ? (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEdit(f.id)}
-                                disabled={editLoading}
-                                className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
-                                {editLoading ? "..." : "Save"}
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => startEdit(f)}
-                                className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setDeleteId(f.id)}
-                                className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </td>
+                          </span>
+                        </th>
+                        <th
+                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                          onClick={() => handleSort("seats")}>
+                          <span className="flex items-center gap-1">
+                            Seats
+                            <SortIcon
+                              column="seats"
+                              sortKey={sortKey}
+                              sortDir={sortDir}
+                            />
+                          </span>
+                        </th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {facultyB.map((f) => {
+                        const subject = stats?.subjects?.find(
+                          (s) => s.id === f.subject_id,
+                        );
+                        const isEditing = editingId === f.id;
+                        return (
+                          <tr
+                            key={f.id}
+                            className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <input
+                                  className="input-field py-1 text-sm w-36"
+                                  value={editForm.name}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      name: e.target.value,
+                                    }))
+                                  }
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-800">
+                                  {f.name}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <select
+                                  className="input-field py-1 text-sm"
+                                  value={editForm.subject_id}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      subject_id: e.target.value,
+                                    }))
+                                  }>
+                                  {stats?.subjects?.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-slate-600">
+                                  {subject?.name || "—"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  className="input-field py-1 text-sm w-20"
+                                  value={editForm.max_limit}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      max_limit: e.target.value,
+                                    }))
+                                  }
+                                />
+                              ) : (
+                                <span
+                                  className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
+                                  {f.current_count}/{f.max_limit}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEdit(f.id)}
+                                    disabled={editLoading}
+                                    className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
+                                    {editLoading ? "..." : "Save"}
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => startEdit(f)}
+                                    className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteId(f.id)}
+                                    className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1672,13 +1728,19 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   const [resetting, setResetting] = useState(false);
   const [filterBranch, setFilterBranch] = useState("");
   const [filterYear, setFilterYear] = useState("");
-
+  const [collapsedTables, setCollapsedTables] = useState({
+    A: false,
+    B: false,
+  });
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getStudents(view);
       setStudents(data.students || []);
       setTotal(data.total || 0);
+      setLastUpdated(new Date());
     } catch (err) {
       toast.error("Failed to load students");
     } finally {
@@ -1686,9 +1748,22 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
     }
   }, [view]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchStudents();
+      toast.success("Students data refreshed!");
+    } catch (err) {
+      toast.error("Failed to refresh students data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents, refreshTrigger]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -1862,6 +1937,38 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     )
                   }
                 />
+                {lastUpdated && (
+                  <span className="text-xs text-slate-500">
+                    Last updated: {lastUpdated.toLocaleTimeString()}
+                  </span>
+                )}
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="btn-secondary flex items-center gap-2 px-3 py-1.5 text-xs">
+                  {refreshing ? (
+                    <>
+                      <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                      Refreshing...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      Refresh
+                    </>
+                  )}
+                </button>
                 {students.length > 0 && (
                   <button
                     onClick={() => setShowResetConfirm(true)}
@@ -1903,110 +2010,140 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
               className="card overflow-hidden"
               key={`students-a-${studentsA.length}`}>
               <div className="px-5 py-4 border-b border-slate-200">
-                <h3 className="font-semibold text-slate-900 font-display">
-                  Group A Students ({studentsA.length})
-                </h3>
-              </div>
-              {studentsA.length === 0 ? (
-                <div className="py-10 text-center text-slate-400 text-sm">
-                  No students found for Group A.
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-slate-900 font-display">
+                    Group A Students ({studentsA.length})
+                  </h3>
+                  <button
+                    onClick={() =>
+                      setCollapsedTables((prev) => ({ ...prev, A: !prev.A }))
+                    }
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+                    <svg
+                      className={`w-5 h-5 transform transition-transform ${collapsedTables.A ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        {COLS.map((col) => (
-                          <th
-                            key={col.key}
-                            onClick={() => handleSort(col.key)}
-                            className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
-                            <span className="flex items-center gap-1">
-                              {col.label}
-                              <SortIcon
-                                column={col.key}
-                                sortKey={sortKey}
-                                sortDir={sortDir}
-                              />
-                            </span>
-                          </th>
-                        ))}
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <AnimatePresence initial={false}>
-                        {studentsA.map((s) => (
-                          <motion.tr
-                            key={s.id}
-                            layout
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.15 }}
-                            className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-5 py-3 text-slate-800 font-medium">
-                              {s.name || (
-                                <span className="text-slate-300 italic text-xs">
-                                  —
+              </div>
+              {!collapsedTables.A && (
+                <>
+                  {studentsA.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm">
+                      No students found for Group A.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                          <tr>
+                            {COLS.map((col) => (
+                              <th
+                                key={col.key}
+                                onClick={() => handleSort(col.key)}
+                                className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
+                                <span className="flex items-center gap-1">
+                                  {col.label}
+                                  <SortIcon
+                                    column={col.key}
+                                    sortKey={sortKey}
+                                    sortDir={sortDir}
+                                  />
                                 </span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                {s.pin}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-slate-600">
-                              {s.branch || "—"}
-                            </td>
-                            <td className="px-5 py-3 text-slate-600">
-                              {s.year || "—"}
-                            </td>
-                            <td className="px-5 py-3">
-                              {s.has_submitted ? (
-                                <span className="badge-green">✓ Submitted</span>
-                              ) : (
-                                <span className="badge-yellow">Pending</span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3 text-right">
-                              <button
-                                onClick={() => setDeletePin(s.pin)}
-                                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
-                                Delete
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
+                              </th>
+                            ))}
+                            <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <AnimatePresence initial={false}>
+                            {studentsA.map((s) => (
+                              <motion.tr
+                                key={s.id}
+                                layout
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ duration: 0.15 }}
+                                className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="px-5 py-3 text-slate-800 font-medium">
+                                  {s.name || (
+                                    <span className="text-slate-300 italic text-xs">
+                                      —
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3">
+                                  <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                    {s.pin}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.branch || "—"}
+                                </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.year || "—"}
+                                </td>
+                                <td className="px-5 py-3">
+                                  {s.has_submitted ? (
+                                    <span className="badge-green">
+                                      ✓ Submitted
+                                    </span>
+                                  ) : (
+                                    <span className="badge-yellow">
+                                      Pending
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3 text-right">
+                                  <button
+                                    onClick={() => setDeletePin(s.pin)}
+                                    className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                                    Delete
+                                  </button>
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </AnimatePresence>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                      Showing{" "}
+                      <span className="font-semibold text-slate-600">
+                        {studentsA.length}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-semibold text-slate-600">
+                        {total}
+                      </span>{" "}
+                      students in Group A
+                      {search && <span className="ml-1">(filtered)</span>}
+                    </p>
+                    {sortKey && (
+                      <p className="text-xs text-slate-400">
+                        Sorted by{" "}
+                        <span className="font-medium text-slate-600">
+                          {sortKey}
+                        </span>{" "}
+                        ({sortDir === "asc" ? "A→Z" : "Z→A"})
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
-              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                <p className="text-xs text-slate-400">
-                  Showing{" "}
-                  <span className="font-semibold text-slate-600">
-                    {studentsA.length}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-slate-600">{total}</span>{" "}
-                  students in Group A
-                  {search && <span className="ml-1">(filtered)</span>}
-                </p>
-                {sortKey && (
-                  <p className="text-xs text-slate-400">
-                    Sorted by{" "}
-                    <span className="font-medium text-slate-600">
-                      {sortKey}
-                    </span>{" "}
-                    ({sortDir === "asc" ? "A→Z" : "Z→A"})
-                  </p>
-                )}
-              </div>
             </div>
 
             {/* Group B Students Table */}
@@ -2014,110 +2151,140 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
               className="card overflow-hidden"
               key={`students-b-${studentsB.length}`}>
               <div className="px-5 py-4 border-b border-slate-200">
-                <h3 className="font-semibold text-slate-900 font-display">
-                  Group B Students ({studentsB.length})
-                </h3>
-              </div>
-              {studentsB.length === 0 ? (
-                <div className="py-10 text-center text-slate-400 text-sm">
-                  No students found for Group B.
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-slate-900 font-display">
+                    Group B Students ({studentsB.length})
+                  </h3>
+                  <button
+                    onClick={() =>
+                      setCollapsedTables((prev) => ({ ...prev, B: !prev.B }))
+                    }
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
+                    <svg
+                      className={`w-5 h-5 transform transition-transform ${collapsedTables.B ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        {COLS.map((col) => (
-                          <th
-                            key={col.key}
-                            onClick={() => handleSort(col.key)}
-                            className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
-                            <span className="flex items-center gap-1">
-                              {col.label}
-                              <SortIcon
-                                column={col.key}
-                                sortKey={sortKey}
-                                sortDir={sortDir}
-                              />
-                            </span>
-                          </th>
-                        ))}
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <AnimatePresence initial={false}>
-                        {studentsB.map((s) => (
-                          <motion.tr
-                            key={s.id}
-                            layout
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.15 }}
-                            className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-5 py-3 text-slate-800 font-medium">
-                              {s.name || (
-                                <span className="text-slate-300 italic text-xs">
-                                  —
+              </div>
+              {!collapsedTables.B && (
+                <>
+                  {studentsB.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm">
+                      No students found for Group B.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                          <tr>
+                            {COLS.map((col) => (
+                              <th
+                                key={col.key}
+                                onClick={() => handleSort(col.key)}
+                                className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
+                                <span className="flex items-center gap-1">
+                                  {col.label}
+                                  <SortIcon
+                                    column={col.key}
+                                    sortKey={sortKey}
+                                    sortDir={sortDir}
+                                  />
                                 </span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                {s.pin}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-slate-600">
-                              {s.branch || "—"}
-                            </td>
-                            <td className="px-5 py-3 text-slate-600">
-                              {s.year || "—"}
-                            </td>
-                            <td className="px-5 py-3">
-                              {s.has_submitted ? (
-                                <span className="badge-green">✓ Submitted</span>
-                              ) : (
-                                <span className="badge-yellow">Pending</span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3 text-right">
-                              <button
-                                onClick={() => setDeletePin(s.pin)}
-                                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
-                                Delete
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
+                              </th>
+                            ))}
+                            <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <AnimatePresence initial={false}>
+                            {studentsB.map((s) => (
+                              <motion.tr
+                                key={s.id}
+                                layout
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ duration: 0.15 }}
+                                className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="px-5 py-3 text-slate-800 font-medium">
+                                  {s.name || (
+                                    <span className="text-slate-300 italic text-xs">
+                                      —
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3">
+                                  <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                    {s.pin}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.branch || "—"}
+                                </td>
+                                <td className="px-5 py-3 text-slate-600">
+                                  {s.year || "—"}
+                                </td>
+                                <td className="px-5 py-3">
+                                  {s.has_submitted ? (
+                                    <span className="badge-green">
+                                      ✓ Submitted
+                                    </span>
+                                  ) : (
+                                    <span className="badge-yellow">
+                                      Pending
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3 text-right">
+                                  <button
+                                    onClick={() => setDeletePin(s.pin)}
+                                    className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                                    Delete
+                                  </button>
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </AnimatePresence>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                      Showing{" "}
+                      <span className="font-semibold text-slate-600">
+                        {studentsB.length}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-semibold text-slate-600">
+                        {total}
+                      </span>{" "}
+                      students in Group B
+                      {search && <span className="ml-1">(filtered)</span>}
+                    </p>
+                    {sortKey && (
+                      <p className="text-xs text-slate-400">
+                        Sorted by{" "}
+                        <span className="font-medium text-slate-600">
+                          {sortKey}
+                        </span>{" "}
+                        ({sortDir === "asc" ? "A→Z" : "Z→A"})
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
-              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                <p className="text-xs text-slate-400">
-                  Showing{" "}
-                  <span className="font-semibold text-slate-600">
-                    {studentsB.length}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-slate-600">{total}</span>{" "}
-                  students in Group B
-                  {search && <span className="ml-1">(filtered)</span>}
-                </p>
-                {sortKey && (
-                  <p className="text-xs text-slate-400">
-                    Sorted by{" "}
-                    <span className="font-medium text-slate-600">
-                      {sortKey}
-                    </span>{" "}
-                    ({sortDir === "asc" ? "A→Z" : "Z→A"})
-                  </p>
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -2226,13 +2393,13 @@ function SettingsTab({
   const [togglingA, setTogglingA] = useState(false);
   const [togglingB, setTogglingB] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [importingA, setImportingA] = useState(false);
+  const [importingB, setImportingB] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [pendingImport, setPendingImport] = useState(null);
   const [endTimeErrorA, setEndTimeErrorA] = useState("");
   const [endTimeErrorB, setEndTimeErrorB] = useState("");
-  const [importGroup, setImportGroup] = useState("A");
   const isOpenA = stats?.config?.selection_open_a;
   const isOpenB = stats?.config?.selection_open_b;
 
@@ -2409,21 +2576,22 @@ function SettingsTab({
     }
   };
 
-  const handleImport = async (e) => {
+  const handleImport = async (e, group) => {
     const file = e.target.files[0];
     if (!file) return;
+    const setImporting = group === "A" ? setImportingA : setImportingB;
     setImporting(true);
     setImportResult(null);
     setPendingImport(null);
     try {
-      const result = await importStudents(file, importGroup);
+      const result = await importStudents(file, group);
       if ((result.duplicateCount ?? 0) > 0) {
         // Hold result — show warning panel instead of success
-        setPendingImport(result);
+        setPendingImport({ ...result, group });
       } else {
         setImportResult(result);
         toast.success(
-          `Imported ${result.importedCount} students to Group ${importGroup}!`,
+          `Imported ${result.importedCount} students to Group ${group}!`,
         );
         onRefresh();
       }
@@ -2443,7 +2611,7 @@ function SettingsTab({
     setImportResult(pendingImport);
     setPendingImport(null);
     toast.success(
-      `Imported ${pendingImport.importedCount} students to Group ${importGroup}!`,
+      `Imported ${pendingImport.importedCount} students to Group ${pendingImport.group}!`,
     );
     onRefresh();
   };
@@ -2782,41 +2950,60 @@ function SettingsTab({
             | Name | PIN | DOB |
           </span>
         </p>
-        <div className="flex gap-3 mb-4">
+        <div className="space-y-4">
           <div>
-            <label className="label">Select Group</label>
-            <select
-              className="input-field"
-              value={importGroup}
-              onChange={(e) => setImportGroup(e.target.value)}>
-              <option value="A">Group A</option>
-              <option value="B">Group B</option>
-            </select>
+            <label className="label">Group A: Upload Group A Excel File</label>
+            <label
+              className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingA ? "opacity-50 cursor-not-allowed" : ""}`}>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              {importingA ? "Importing..." : "Upload Group A Excel File"}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => handleImport(e, "A")}
+                disabled={importingA}
+              />
+            </label>
+          </div>
+          <div>
+            <label className="label">Group B: Upload Group B Excel File</label>
+            <label
+              className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingB ? "opacity-50 cursor-not-allowed" : ""}`}>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              {importingB ? "Importing..." : "Upload Group B Excel File"}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => handleImport(e, "B")}
+                disabled={importingB}
+              />
+            </label>
           </div>
         </div>
-        <label
-          className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-          {importing ? "Importing..." : "Upload Excel File"}
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={handleImport}
-            disabled={importing}
-          />
-        </label>
         <AnimatePresence mode="wait">
           {pendingImport && (
             <motion.div
