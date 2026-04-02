@@ -1726,8 +1726,8 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   const [deleting, setDeleting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [filterBranch, setFilterBranch] = useState("");
-  const [filterYear, setFilterYear] = useState("");
+  // const [filterBranch, setFilterBranch] = useState("");
+  // const [filterYear, setFilterYear] = useState("");
   const [collapsedTables, setCollapsedTables] = useState({
     A: false,
     B: false,
@@ -1763,7 +1763,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   useEffect(() => {
     fetchStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
+  }, [view, refreshTrigger]);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -1811,9 +1811,9 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
       s.branch?.toLowerCase().includes(q) ||
       s.year?.toString().includes(q) ||
       s.name?.toLowerCase().includes(q);
-    const matchesBranch = !filterBranch || s.branch === filterBranch;
-    const matchesYear = !filterYear || s.year?.toString() === filterYear;
-    return matchesSearch && matchesBranch && matchesYear;
+    // const matchesBranch = !filterBranch || s.branch === filterBranch;
+    // const matchesYear = !filterYear || s.year?.toString() === filterYear;
+    return matchesSearch;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -1830,8 +1830,8 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
     return 0;
   });
 
-  const studentsA = sorted.filter((s) => s.group === "A");
-  const studentsB = sorted.filter((s) => s.group === "B");
+  const studentsA = sorted.filter((s) => s.group?.toUpperCase() === "A");
+  const studentsB = sorted.filter((s) => s.group?.toUpperCase() === "B");
 
   const COLS = [
     { key: "name", label: "Name" },
@@ -1901,32 +1901,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                   </button>
                 )}
               </div>
-              <select
-                className="input-field py-1.5 text-sm w-32"
-                value={filterBranch}
-                onChange={(e) => setFilterBranch(e.target.value)}>
-                <option value="">All Branches</option>
-                {[
-                  ...new Set(students.map((s) => s.branch).filter(Boolean)),
-                ].map((branch) => (
-                  <option key={branch} value={branch}>
-                    {branch}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input-field py-1.5 text-sm w-24"
-                value={filterYear}
-                onChange={(e) => setFilterYear(e.target.value)}>
-                <option value="">All Years</option>
-                {[...new Set(students.map((s) => s.year).filter(Boolean))].map(
-                  (year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ),
-                )}
-              </select>
+
               <div className="flex items-center gap-2">
                 <DownloadCSVButton
                   label="Download CSV"
@@ -1937,6 +1912,14 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     )
                   }
                 />
+
+                {students.length > 0 && (
+                  <button
+                    onClick={() => setShowResetConfirm(true)}
+                    className="text-xs text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap">
+                    Delete All Students
+                  </button>
+                )}
                 {lastUpdated && (
                   <span className="text-xs text-slate-500">
                     Last updated: {lastUpdated.toLocaleTimeString()}
@@ -1969,13 +1952,6 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </>
                   )}
                 </button>
-                {students.length > 0 && (
-                  <button
-                    onClick={() => setShowResetConfirm(true)}
-                    className="text-xs text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap">
-                    Delete All Students
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -2120,18 +2096,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </div>
                   )}
                   <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <p className="text-xs text-slate-400">
-                      Showing{" "}
-                      <span className="font-semibold text-slate-600">
-                        {studentsA.length}
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-semibold text-slate-600">
-                        {total}
-                      </span>{" "}
-                      students in Group A
-                      {search && <span className="ml-1">(filtered)</span>}
-                    </p>
+                   
                     {sortKey && (
                       <p className="text-xs text-slate-400">
                         Sorted by{" "}
@@ -2261,18 +2226,7 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
                     </div>
                   )}
                   <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <p className="text-xs text-slate-400">
-                      Showing{" "}
-                      <span className="font-semibold text-slate-600">
-                        {studentsB.length}
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-semibold text-slate-600">
-                        {total}
-                      </span>{" "}
-                      students in Group B
-                      {search && <span className="ml-1">(filtered)</span>}
-                    </p>
+                  
                     {sortKey && (
                       <p className="text-xs text-slate-400">
                         Sorted by{" "}
