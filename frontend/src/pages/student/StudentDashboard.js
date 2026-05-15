@@ -386,6 +386,8 @@ export default function StudentDashboard() {
     if (selections[subjectId] === facultyId) return;
 
     const previousFacultyId = selections[subjectId];
+    const optimisticSelections = { ...selections, [subjectId]: facultyId };
+    setSelections(optimisticSelections);
     setReservationLoading(true);
 
     try {
@@ -394,12 +396,20 @@ export default function StudentDashboard() {
       }
 
       await reserveFaculty(subjectId, facultyId);
-      setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
     } catch (err) {
       console.error("Reservation error", err);
       toast.error(
         err.error || err.message || "Unable to reserve seat. Please try again.",
       );
+      setSelections((prev) => {
+        const restored = { ...prev };
+        if (previousFacultyId) {
+          restored[subjectId] = previousFacultyId;
+        } else {
+          delete restored[subjectId];
+        }
+        return restored;
+      });
     } finally {
       setReservationLoading(false);
     }
