@@ -12,10 +12,37 @@ import {
   releaseFaculty,
   getActiveReservations,
 } from "../../services/api";
+
 import StudentNavbar from "../../components/shared/StudentNavbar";
 import SubjectAccordionList from "../../components/student/SubjectAccordionList";
 import ConfirmModal from "../../components/shared/ConfirmModal";
 import Footer from "../../components/shared/Footer";
+
+const toastStyles = {
+  success: "bg-emerald-600 border-emerald-500 text-white",
+  error: "bg-rose-600 border-rose-500 text-white",
+  info: "bg-slate-900 border-slate-700 text-white",
+};
+
+function showPopup(message, type = "info", options = {}) {
+  const { duration = 4000, position = "top-right", centered = false } = options;
+  return toast.custom(
+    (t) => (
+      <div
+        className={`max-w-md w-full border px-4 py-3 rounded-2xl shadow-xl shadow-slate-900/5 flex items-start gap-3 ${toastStyles[type] || toastStyles.info}`}
+        style={{ marginTop: centered ? "20vh" : undefined }}>
+        <div className="flex-1 text-sm leading-5 break-words">{message}</div>
+        <button
+          onClick={() => toast.dismiss(t.id)}
+          className="self-start ml-2 text-white/80 hover:text-white focus:outline-none"
+          aria-label="Close notification">
+          ×
+        </button>
+      </div>
+    ),
+    { duration, position },
+  );
+}
 
 const PreviousSelectionsView = React.forwardRef(({ selections, user }, ref) => {
   const [enriched, setEnriched] = useState([]);
@@ -381,11 +408,18 @@ export default function StudentDashboard() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isSubmitted, selections]);
 
-  const handleSelect = async (subjectId, facultyId) => {
+  const handleSelect = async (
+    subjectId,
+    facultyId,
+    facultyName,
+    previousFacultyName,
+  ) => {
     if (isSubmitted || isSelectionClosed) return;
     if (selections[subjectId] === facultyId) return;
 
     const previousFacultyId = selections[subjectId];
+    let releasedPreviousReservation = false;
+
     setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
     setReservationLoading(true);
 
@@ -393,11 +427,11 @@ export default function StudentDashboard() {
       if (previousFacultyId && previousFacultyId !== facultyId) {
         try {
           await releaseFaculty(subjectId, previousFacultyId);
+          releasedPreviousReservation = true;
         } catch (releaseErr) {
           if (releaseErr.code !== "NOT_FOUND") {
             throw releaseErr;
           }
-          // If the old reservation was not found, continue and create the new one.
           console.warn(
             "Old reservation not found during change; continuing with new reservation.",
             releaseErr,
@@ -406,11 +440,55 @@ export default function StudentDashboard() {
       }
 
       await reserveFaculty(subjectId, facultyId);
+      const subjectName =
+        subjects.find((subject) => subject.id === subjectId)?.name || "Subject";
+      if (previousFacultyId && previousFacultyId !== facultyId) {
+        showPopup(
+          `Switched ${subjectName} from ${previousFacultyName || "your previous faculty"} to ${facultyName}.`,
+          "success",
+        );
+      } else {
+        showPopup(`Reserved ${facultyName} for ${subjectName}.`, "success");
+      }
     } catch (err) {
       console.error("Reservation error", err);
-      toast.error(
-        err.error || err.message || "Unable to reserve seat. Please try again.",
-      );
+      const subjectName =
+        subjects.find((subject) => subject.id === subjectId)?.name || "Subject";
+      const errorMessage =
+        err.error || err.message || "Unable to reserve seat. Please try again.";
+
+      if (
+        err.code === "SEATS_FULL" ||
+        errorMessage.includes("No seats available")
+      ) {
+        showPopup(
+          `${subjectName}: No seats available for ${facultyName}.`,
+          "error",
+          { duration: 2000, position: "top-center", centered: true },
+        );
+      } else {
+        showPopup(errorMessage, "error");
+      }
+
+      if (
+        previousFacultyId &&
+        previousFacultyId !== facultyId &&
+        releasedPreviousReservation
+      ) {
+        try {
+          await reserveFaculty(subjectId, previousFacultyId);
+        } catch (restoreErr) {
+          console.warn(
+            "Failed to restore previous faculty reservation after failed switch.",
+            restoreErr,
+          );
+          showPopup(
+            "Unable to restore your previous reservation. Please reselect your earlier faculty.",
+            "error",
+          );
+        }
+      }
+
       setSelections((prev) => {
         const restored = { ...prev };
         if (previousFacultyId) {
@@ -455,7 +533,7 @@ export default function StudentDashboard() {
       toast.success("Faculty selection submitted successfully!");
       setShowConfirm(false);
     } catch (err) {
-      toast.error(err.error || "Submission failed. Please try again.");
+      showPopup(err.error || "Submission failed. Please try again.", "error");
       if (err.code === "ALREADY_SUBMITTED") {
         updateUser({ has_submitted: true });
       }
@@ -467,7 +545,7 @@ export default function StudentDashboard() {
 
   const handleDownloadJpg = async () => {
     if (!selectionsRef.current) {
-      toast.error("Could not find content to download.");
+      showPopup("Could not find content to download.", "error");
       return;
     }
     setDownloading(true);
@@ -499,10 +577,10 @@ export default function StudentDashboard() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success("Downloaded selections as JPG!");
+      showPopup("Downloaded selections as JPG!", "success");
     } catch (error) {
       console.error("Download failed", error);
-      toast.error("Failed to download image.");
+      showPopup("Failed to download image.", "error");
     } finally {
       // Revert styles to their original state
       element.style.overflow = originalOverflow;

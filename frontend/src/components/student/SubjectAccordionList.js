@@ -51,7 +51,9 @@ function FacultyOption({ faculty, selected, onSelect, disabled }) {
             ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed"
             : "border-slate-200 hover:border-primary-300 hover:bg-blue-50/40"
       }`}
-      onClick={() => !isFull && !disabled && onSelect(faculty.id)}>
+      onClick={() =>
+        !isFull && !disabled && onSelect(faculty.id, faculty.name)
+      }>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5 flex-1 min-w-0">
           {/* Radio indicator */}
@@ -149,7 +151,7 @@ function SubjectAccordion({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors">
+        className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors">
         <div className="flex items-center gap-3">
           {/* Status indicator */}
           <div
@@ -243,7 +245,9 @@ function SubjectAccordion({
                       key={f.id}
                       faculty={f}
                       selected={selectedFacultyId}
-                      onSelect={(id) => onSelect(subject.id, id)}
+                      onSelect={(id, name) =>
+                        onSelect(subject.id, id, name, selectedFaculty?.name)
+                      }
                       disabled={disabled}
                     />
                   ))}
@@ -271,8 +275,13 @@ export default function SubjectAccordionList({
   };
 
   // Auto-open next incomplete subject
-  const handleSelect = (subjectId, facultyId) => {
-    onSelect(subjectId, facultyId);
+  const handleSelect = (
+    subjectId,
+    facultyId,
+    facultyName,
+    previousFacultyName,
+  ) => {
+    onSelect(subjectId, facultyId, facultyName, previousFacultyName);
     const currentIdx = subjects.findIndex((s) => s.id === subjectId);
     const nextIncomplete = subjects
       .slice(currentIdx + 1)
