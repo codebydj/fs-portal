@@ -2,12 +2,18 @@ import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import CountdownTimer from "./CountdownTimer";
+import { releaseAllReservations } from "../../services/api";
 
 export default function StudentNavbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await releaseAllReservations();
+    } catch (error) {
+      console.warn("Logout reservation release failed", error);
+    }
     logout();
     navigate("/login");
   };

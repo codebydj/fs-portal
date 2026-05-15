@@ -106,17 +106,26 @@ exports.addFaculty = async (req, res) => {
       }
     }
 
+    const totalSeats = Number(max_limit);
     const ref = await db.collection("faculty").add({
       name: name.trim(),
       subject_id,
       // experience: experience ? Number(experience) : null, // Removed as per frontend
-      max_limit: Number(max_limit),
+      max_limit: totalSeats,
       group,
       current_count: 0,
+      totalSeats,
+      enrolled: 0,
+      reservedSeats: 0,
+      availableSeats: totalSeats,
     });
-    return res
-      .status(201)
-      .json({ id: ref.id, name: name.trim(), subject_id, group, max_limit });
+    return res.status(201).json({
+      id: ref.id,
+      name: name.trim(),
+      subject_id,
+      group,
+      max_limit: totalSeats,
+    });
   } catch (err) {
     console.error(err);
     return res
@@ -156,12 +165,10 @@ exports.resetFacultyByGroup = async (req, res) => {
     const batch = db.batch();
     facultySnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: `All faculty for Group ${group} deleted`,
-      });
+    return res.status(200).json({
+      success: true,
+      message: `All faculty for Group ${group} deleted`,
+    });
   } catch (err) {
     console.error(err);
     return res
@@ -223,10 +230,25 @@ exports.resetSelections = async (req, res) => {
 
     const facultySnap = await db.collection("faculty").get();
     const facBatch = db.batch();
-    facultySnap.docs.forEach((d) =>
-      facBatch.update(d.ref, { current_count: 0 }),
-    );
+    facultySnap.docs.forEach((d) => {
+      const facultyData = d.data();
+      const totalSeats = Number(
+        facultyData.totalSeats ?? facultyData.max_limit ?? 0,
+      );
+      facBatch.update(d.ref, {
+        current_count: 0,
+        enrolled: 0,
+        reservedSeats: 0,
+        availableSeats: totalSeats,
+        totalSeats,
+      });
+    });
     await facBatch.commit();
+
+    const reservationsSnap = await db.collection("reservations").get();
+    const reservationBatch = db.batch();
+    reservationsSnap.docs.forEach((d) => reservationBatch.delete(d.ref));
+    await reservationBatch.commit();
 
     const studSnap = await db.collection("students").get();
     const studBatch = db.batch();
@@ -771,16 +793,31 @@ exports.editFaculty = async (req, res) => {
       }
     }
 
-    await db
-      .collection("faculty")
-      .doc(id)
-      .update({
-        name: name.trim(),
-        subject_id, // Ensure subject_id is updated
-        // experience: experience ? Number(experience) : null, // Removed as per frontend
-        max_limit: Number(max_limit),
-        group,
-      });
+    const facultyRef = db.collection("faculty").doc(id);
+    const facultySnap = await facultyRef.get();
+    if (!facultySnap.exists) {
+      return res
+        .status(404)
+        .json({ error: "Faculty not found", code: "NOT_FOUND" });
+    }
+
+    const facultyData = facultySnap.data();
+    const enrolled = Number(
+      facultyData.enrolled ?? facultyData.current_count ?? 0,
+    );
+    const reservedSeats = Number(facultyData.reservedSeats ?? 0);
+    const totalSeats = Number(max_limit);
+    const availableSeats = Math.max(0, totalSeats - enrolled - reservedSeats);
+
+    await facultyRef.update({
+      name: name.trim(),
+      subject_id,
+      // experience: experience ? Number(experience) : null, // Removed as per frontend
+      max_limit: totalSeats,
+      group,
+      totalSeats,
+      availableSeats,
+    });
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);

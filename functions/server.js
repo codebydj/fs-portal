@@ -49,7 +49,14 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 const { studentLogin } = require("./controllers/authController");
 const { adminLogin } = require("./controllers/adminAuthController");
-const { submitSelection } = require("./controllers/selectionController");
+const {
+  reserveSelection,
+  releaseReservation,
+  releaseAllReservations,
+  getActiveReservations,
+  submitSelection,
+  startReservationCleanup,
+} = require("./controllers/selectionController");
 const {
   addSubject,
   deleteSubject,
@@ -81,6 +88,10 @@ const { verifyStudent } = require("./middlewares/studentAuth");
 
 app.post("/auth/student/login", studentLogin);
 app.post("/auth/admin/login", adminLogin);
+app.post("/selection/reserve", verifyStudent, reserveSelection);
+app.post("/selection/release", verifyStudent, releaseReservation);
+app.post("/selection/release-all", verifyStudent, releaseAllReservations);
+app.get("/selection/reservations", verifyStudent, getActiveReservations);
 app.post("/selection/submit", verifyStudent, submitSelection);
 
 app.get("/admin/stats", verifyAdmin, getStats);
@@ -134,6 +145,7 @@ app.get(
 );
 
 const PORT = process.env.PORT || 8080;
+startReservationCleanup();
 app.listen(PORT, () =>
   console.log(`✅ Faculty Portal API running on port ${PORT}`),
 );

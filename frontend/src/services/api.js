@@ -45,6 +45,26 @@ export const submitSelection = (selections) =>
     body: JSON.stringify({ selections }),
   });
 
+export const reserveFaculty = (subjectId, facultyId) =>
+  request("/selection/reserve", {
+    method: "POST",
+    body: JSON.stringify({ subjectId, facultyId }),
+  });
+
+export const releaseFaculty = (subjectId, facultyId) =>
+  request("/selection/release", {
+    method: "POST",
+    body: JSON.stringify({ subjectId, facultyId }),
+  });
+
+export const releaseAllReservations = () =>
+  request("/selection/release-all", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+export const getActiveReservations = () => request("/selection/reservations");
+
 // ── Admin — Stats & Students ─────────────────────────────────
 export const getAdminStats = () => request("/admin/stats");
 export const getStudents = (status = "all") =>

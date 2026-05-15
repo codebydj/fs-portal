@@ -28,9 +28,17 @@ function getSeatColor(current, max) {
 }
 
 function FacultyOption({ faculty, selected, onSelect, disabled }) {
-  const seatsLeft = faculty.max_limit - faculty.current_count;
+  const totalSeats = Number(faculty.totalSeats ?? faculty.max_limit ?? 0);
+  const enrolled = Number(faculty.enrolled ?? faculty.current_count ?? 0);
+  const reservedSeats = Number(faculty.reservedSeats ?? 0);
+  const availableSeats = Number(
+    faculty.availableSeats ??
+      Math.max(0, totalSeats - enrolled - reservedSeats),
+  );
+  const occupiedSeats = Math.min(totalSeats, enrolled + reservedSeats);
+  const seatsLeft = Math.max(0, availableSeats);
   const isFull = seatsLeft <= 0;
-  const color = getSeatColor(faculty.current_count, faculty.max_limit);
+  const color = getSeatColor(occupiedSeats, totalSeats);
   const isSelected = selected === faculty.id;
 
   return (
@@ -89,13 +97,17 @@ function FacultyOption({ faculty, selected, onSelect, disabled }) {
             className={`h-full rounded-full ${color.bar}`}
             initial={false}
             animate={{
-              width: `${Math.min(100, (faculty.current_count / faculty.max_limit) * 100)}%`,
+              width: `${
+                totalSeats > 0
+                  ? Math.min(100, (occupiedSeats / totalSeats) * 100)
+                  : 100
+              }%`,
             }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           />
         </div>
         <p className="text-xs text-slate-400 mt-0.5">
-          {faculty.current_count}/{faculty.max_limit} seats filled
+          {enrolled}/{totalSeats} enrolled + {reservedSeats} reserved
         </p>
       </div>
     </motion.div>

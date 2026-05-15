@@ -21,3 +21,6 @@ frontend/build/
 # ── OS files ──────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# project information
+PROJECT_DOCUMENTATION.txt

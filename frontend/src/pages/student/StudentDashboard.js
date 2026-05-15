@@ -6,7 +6,12 @@ import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
 import * as htmlToImage from "html-to-image";
 import { useAuth } from "../../context/AuthContext";
 import { useCountdown } from "../../hooks/useCountdown";
-import { submitSelection } from "../../services/api";
+import {
+  submitSelection,
+  reserveFaculty,
+  releaseFaculty,
+  getActiveReservations,
+} from "../../services/api";
 import StudentNavbar from "../../components/shared/StudentNavbar";
 import SubjectAccordionList from "../../components/student/SubjectAccordionList";
 import ConfirmModal from "../../components/shared/ConfirmModal";
@@ -171,7 +176,6 @@ const AlreadySubmittedModal = ({
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="relative z-10 w-full max-w-2xl bg-white rounded-2xl shadow-modal overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-end justify-end gap-3">
-           
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors flex-shrink-0">
@@ -219,18 +223,18 @@ const AlreadySubmittedModal = ({
               {user?.name} ({user?.pin})
             </p>
             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Group: {user?.group || "A"}
-              </span>
+              <svg
+                className="w-3.5 h-3.5"
+                fill="currentColor"
+                viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Group: {user?.group || "A"}
+            </span>
             <p className="text-slate-500 text-sm mt-3">
               Submitted on {submissionTime}
             </p>
@@ -273,6 +277,7 @@ export default function StudentDashboard() {
   const [subjects, setSubjects] = useState([]);
   const [selections, setSelections] = useState({});
   const [loading, setLoading] = useState(true);
+  const [reservationLoading, setReservationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [previousSelections, setPreviousSelections] = useState(null);
@@ -300,6 +305,31 @@ export default function StudentDashboard() {
     return () => unsub();
   }, []);
 
+  // Load active reservations for the logged-in student
+  useEffect(() => {
+    if (!user?.pin || isSubmitted) return;
+
+    let isMounted = true;
+    async function fetchReservations() {
+      try {
+        const data = await getActiveReservations();
+        if (!isMounted || !data?.reservations) return;
+        const reservationMap = {};
+        data.reservations.forEach((reservation) => {
+          reservationMap[reservation.subjectId] = reservation.facultyId;
+        });
+        setSelections(reservationMap);
+      } catch (error) {
+        console.error("Failed to load active reservations", error);
+      }
+    }
+
+    fetchReservations();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.pin, isSubmitted]);
+
   // Load previous selections if already submitted
   useEffect(() => {
     if (isSubmitted) {
@@ -322,9 +352,57 @@ export default function StudentDashboard() {
     }
   }, [isSubmitted, previousSelections]);
 
-  const handleSelect = (subjectId, facultyId) => {
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (isSubmitted) return;
+      const activeSubjectIds = Object.keys(selections);
+      if (activeSubjectIds.length === 0) return;
+
+      const token = localStorage.getItem("student_token");
+      if (!token) return;
+
+      const apiUrl = process.env.REACT_APP_API_URL || window.location.origin;
+      try {
+        fetch(`${apiUrl}/selection/release-all`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
+          keepalive: true,
+        });
+      } catch (error) {
+        console.warn("Unable to release reservations on unload", error);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isSubmitted, selections]);
+
+  const handleSelect = async (subjectId, facultyId) => {
     if (isSubmitted || isSelectionClosed) return;
-    setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
+    if (selections[subjectId] === facultyId) return;
+
+    const previousFacultyId = selections[subjectId];
+    setReservationLoading(true);
+
+    try {
+      if (previousFacultyId && previousFacultyId !== facultyId) {
+        await releaseFaculty(subjectId, previousFacultyId);
+      }
+
+      await reserveFaculty(subjectId, facultyId);
+      setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
+    } catch (err) {
+      console.error("Reservation error", err);
+      toast.error(
+        err.error || err.message || "Unable to reserve seat. Please try again.",
+      );
+    } finally {
+      setReservationLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -654,7 +732,12 @@ export default function StudentDashboard() {
                 subjects={subjects}
                 selections={selections}
                 onSelect={handleSelect}
-                disabled={isSubmitted || isSelectionClosed}
+                disabled={
+                  isSubmitted ||
+                  isSelectionClosed ||
+                  reservationLoading ||
+                  submitting
+                }
                 userGroup={user?.group || "A"}
               />
             </motion.div>
