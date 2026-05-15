@@ -1,8 +1,8 @@
 import React from "react";
 
 const mainDevelopers = [
-  { name: "Haritha Kongi", url: "https://github.com/HarithaKongi" },
   { name: "Dhanunjaya P", url: "https://github.com/codebydj" },
+  { name: "Haritha Kongi", url: "https://github.com/HarithaKongi" },
   // { name: "member 2", url: "https://github.com/HarithaKongi" },
 ];
 

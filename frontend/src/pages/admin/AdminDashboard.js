@@ -247,7 +247,7 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                   <tr>
-                    {["#", "Name", "PIN", "Branch", "Time"].map((h) => (
+                    {["#", "Name", "PIN", "Branch"].map((h) => (
                       <th
                         key={h}
                         className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
@@ -277,9 +277,9 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
                       <td className="px-4 py-3 text-slate-500">
                         {s.branch || "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-400 text-xs">
+                      {/* <td className="px-4 py-3 text-slate-400 text-xs">
                         {formatTime(s.timestamp)}
-                      </td>
+                      </td> */}
                     </tr>
                   ))}
                 </tbody>

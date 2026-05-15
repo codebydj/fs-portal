@@ -178,7 +178,7 @@ export default function AdminLogin() {
                 )}
               </button>
               <p className="text-center text-sm text-slate-400" mt-2>
-                last updated: 02-04-2026
+                last updated: 16-05-2026
               </p>
             </form>
           </div>
