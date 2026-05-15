@@ -1,4 +1,4 @@
-# 🎓 Faculty Selection Portal
+# 🎓 Faculty Selection Portal.
 
 A production-ready full-stack faculty selection portal built with React + Firebase Firestore + Express (Render).
 
