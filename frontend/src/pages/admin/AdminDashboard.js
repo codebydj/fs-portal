@@ -60,6 +60,27 @@ async function downloadBlob(blobPromise, filename) {
   }
 }
 
+function parseFirestoreTimestamp(timestamp) {
+  if (!timestamp) return null;
+  if (typeof timestamp.toDate === "function") return timestamp.toDate();
+  if (timestamp._seconds) return new Date(timestamp._seconds * 1000);
+  if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+  if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp === "number") return new Date(timestamp);
+  return null;
+}
+
+function formatTime(timestamp) {
+  const date = parseFirestoreTimestamp(timestamp);
+  return date
+    ? date.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "—";
+}
+
 function DownloadCSVButton({ onClick, label = "Download CSV" }) {
   const [loading, setLoading] = useState(false);
 
@@ -257,16 +278,7 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
                         {s.branch || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-400 text-xs">
-                        {s.timestamp?.toDate
-                          ? new Date(s.timestamp.toDate()).toLocaleTimeString(
-                              "en-IN",
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              },
-                            )
-                          : "—"}
+                        {formatTime(s.timestamp)}
                       </td>
                     </tr>
                   ))}
@@ -564,16 +576,7 @@ function DashboardTab({ stats, error }) {
                       </span>
                     </div>
                     <span className="text-xs text-slate-400">
-                      {sel.timestamp?.toDate
-                        ? new Date(sel.timestamp.toDate()).toLocaleTimeString(
-                            "en-IN",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true,
-                            },
-                          )
-                        : "—"}
+                      {formatTime(sel.timestamp)}
                     </span>
                   </div>
                 ))}

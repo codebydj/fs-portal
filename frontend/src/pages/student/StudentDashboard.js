@@ -386,13 +386,23 @@ export default function StudentDashboard() {
     if (selections[subjectId] === facultyId) return;
 
     const previousFacultyId = selections[subjectId];
-    const optimisticSelections = { ...selections, [subjectId]: facultyId };
-    setSelections(optimisticSelections);
+    setSelections((prev) => ({ ...prev, [subjectId]: facultyId }));
     setReservationLoading(true);
 
     try {
       if (previousFacultyId && previousFacultyId !== facultyId) {
-        await releaseFaculty(subjectId, previousFacultyId);
+        try {
+          await releaseFaculty(subjectId, previousFacultyId);
+        } catch (releaseErr) {
+          if (releaseErr.code !== "NOT_FOUND") {
+            throw releaseErr;
+          }
+          // If the old reservation was not found, continue and create the new one.
+          console.warn(
+            "Old reservation not found during change; continuing with new reservation.",
+            releaseErr,
+          );
+        }
       }
 
       await reserveFaculty(subjectId, facultyId);
