@@ -1,0 +1,53 @@
+Faculty Selection Portal - Step-by-Step Workflow
+
+1. Admin login
+   - Open the admin login page.
+   - Enter the admin username and password stored in the backend environment variables (`ADMIN_USER`, `ADMIN_PASS`).
+   - Submit credentials to access the admin dashboard.
+
+2. Add students
+   - In the admin dashboard, go to the Students section.
+   - Add student records manually or import students in bulk from an Excel file using the import tool.
+   - Each student record should include at least PIN, name, and date of birth (DOB).
+   - Confirm the student data appears correctly in the student list.
+
+3. Add subjects
+   - Navigate to the Subjects tab in the admin dashboard.
+   - Add each subject that students will choose faculty for.
+   - Enter the subject name and any required metadata.
+   - Save the subject list.
+
+4. Add faculty and assign subjects
+   - Move to the Faculty section.
+   - Add faculty entries with name, subject assignment, and seat limit.
+   - For each faculty, choose which subject they teach.
+   - Set the maximum number of students they can accept.
+   - Save faculty details.
+
+5. Start the selection session
+   - Open the Settings tab.
+   - Enable or start the student selection session so students can log in and make choices.
+   - Optionally set timing or countdown values if the portal supports a session timer.
+   - Confirm the selection window is marked as open in the admin panel.
+
+6. Student login
+   - The student goes to the student login page.
+   - Enter the registered PIN exactly as stored.
+   - Enter date of birth in DD/MM/YYYY format.
+   - Submit to authenticate and access the student dashboard.
+
+7. Student selects faculty
+   - After successful login, the student sees all available subjects.
+   - For each subject, the student chooses a faculty member from the available list.
+   - The portal shows seat availability and limited faculty slots.
+   - The student submits their selections once all subjects are chosen.
+
+8. Confirm and finalize
+   - Once selection is submitted, the student gets confirmation and can view chosen faculty.
+   - The portal prevents repeated submissions after the selection is completed.
+   - The admin can verify student choices in reports or export CSV data.
+
+9. Admin review and export
+   - Admin can review the current student selection counts, faculty load, and remaining seats.
+   - Use export features to export student lists, faculty lists, or selections as CSV files.
+   - If needed, reset or re-open the session from the admin settings.
