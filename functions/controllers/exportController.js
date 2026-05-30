@@ -200,16 +200,22 @@ exports.exportFacultyCSV = async (req, res) => {
         `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
       );
       csvRows.push(`"Group: ${String(f.group || "").replace(/"/g, '""')}"`);
+      csvRows.push(
+        `"Max Seat: ${String(f.max_limit || 0).replace(/"/g, '""')}"`,
+      );
+      csvRows.push(
+        `"Filled Seat: ${String(f.current_count || 0).replace(/"/g, '""')}"`,
+      );
       csvRows.push("");
 
       // Column headers
-      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
+      csvRows.push('"S.No","Student Name","PIN","Branch"');
 
       // Data rows
       if (selectedStudents.length > 0) {
         selectedStudents.forEach((student, i) => {
           csvRows.push(
-            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}"`,
           );
         });
       } else {
@@ -608,16 +614,22 @@ exports.exportFacultyWiseGroupA = async (req, res) => {
         `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
       );
       csvRows.push(`"Group: A"`);
+      csvRows.push(
+        `"Max Seat: ${String(f.max_limit || 0).replace(/"/g, '""')}"`,
+      );
+      csvRows.push(
+        `"Filled Seat: ${String(f.current_count || 0).replace(/"/g, '""')}"`,
+      );
       csvRows.push("");
 
       // Column headers
-      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
+      csvRows.push('"S.No","Student Name","PIN","Branch"');
 
       // Data rows
       if (selectedStudents.length > 0) {
         selectedStudents.forEach((student, i) => {
           csvRows.push(
-            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}"`,
           );
         });
       } else {
@@ -714,16 +726,22 @@ exports.exportFacultyWiseGroupB = async (req, res) => {
         `"Subject: ${String(sub.name || "Unknown Subject").replace(/"/g, '""')}"`,
       );
       csvRows.push(`"Group: B"`);
+      csvRows.push(
+        `"Max Seat: ${String(f.max_limit || 0).replace(/"/g, '""')}"`,
+      );
+      csvRows.push(
+        `"Filled Seat: ${String(f.current_count || 0).replace(/"/g, '""')}"`,
+      );
       csvRows.push("");
 
       // Column headers
-      csvRows.push('"S.No","Student Name","PIN","Branch","Group"');
+      csvRows.push('"S.No","Student Name","PIN","Branch"');
 
       // Data rows
       if (selectedStudents.length > 0) {
         selectedStudents.forEach((student, i) => {
           csvRows.push(
-            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}","${String(student.group || "").replace(/"/g, '""')}"`,
+            `"${i + 1}","${String(student.name).replace(/"/g, '""')}","${String(student.pin).replace(/"/g, '""')}","${String(student.branch).replace(/"/g, '""')}"`,
           );
         });
       } else {
