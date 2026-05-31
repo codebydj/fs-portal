@@ -18,12 +18,20 @@ const allowedOrigins = [
   /\.web\.app$/,
   /\.firebaseapp\.com$/,
 ];
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = allowedOrigins.some((o) =>
+        typeof o === "string" ? o === origin : o.test(origin),
+      );
+      callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
+    },
     credentials: true,
-  })
+  }),
 );
+
 // ── File upload BEFORE express.json ──────────────────────────
 const { importStudents } = require("./controllers/importController");
 const { verifyAdmin } = require("./middlewares/adminAuth");
