@@ -2,7 +2,7 @@
 
 A production-ready full-stack faculty selection portal built with React + Firebase Firestore + Express (Render).
 
----
+----
 
 ## ✨ Features
 
