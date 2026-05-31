@@ -550,14 +550,18 @@ exports.exportStudentWiseGroupB = async (req, res) => {
 // Export faculty-wise CSV for Group A
 exports.exportFacultyWiseGroupA = async (req, res) => {
   try {
+    console.log("RUNNING GROUP A EXPORT");
     const [facultySnap, subjectsSnap, selectionsSnap, studentsSnap] =
       await Promise.all([
-        db.collection("faculty").get(),
+        db.collection("faculty").where("group", "==", "A").get(),
         db.collection("subjects").get(),
         db.collection("selections").get(),
-        db.collection("students").get(),
+        db.collection("students").where("group", "==", "A").get(),
       ]);
 
+    console.log("Faculty Count (Group A):", facultySnap.docs.length);
+    const groupAFacultyIds = new Set();
+    
     // Build lookup maps
     const subjectsMap = {};
     subjectsSnap.docs.forEach((d) => {
@@ -569,19 +573,21 @@ exports.exportFacultyWiseGroupA = async (req, res) => {
       studentsMap[d.id] = d.data();
     });
 
-    // Group selections by faculty_id, dedup by PIN per faculty, only for Group A faculty
+    // Build set of Group A faculty IDs for quick lookup
+    facultySnap.docs.forEach((d) => {
+      groupAFacultyIds.add(d.id);
+    });
+    console.log("Faculty IDs (Group A):", [...groupAFacultyIds]);
+
+    // Group selections by faculty_id, dedup by PIN per faculty, only for Group A
     const facultySelections = {};
     selectionsSnap.docs.forEach((d) => {
       const sel = d.data();
       if (!sel.faculty_id || !sel.pin) return;
 
-      // Check if faculty is in Group A
-      const facultyDoc = facultySnap.docs.find((f) => f.id === sel.faculty_id);
-      if (!facultyDoc || facultyDoc.data().group !== "A") return;
-
-      // Check if student is in Group A
-      const student = studentsMap[sel.pin];
-      if (!student || student.group !== "A") return;
+      // Only include if faculty is in Group A AND student is in Group A
+      if (!groupAFacultyIds.has(sel.faculty_id)) return;
+      if (!studentsMap[sel.pin]) return;
 
       if (!facultySelections[sel.faculty_id]) {
         facultySelections[sel.faculty_id] = { seen: new Set(), list: [] };
@@ -589,6 +595,7 @@ exports.exportFacultyWiseGroupA = async (req, res) => {
 
       if (!facultySelections[sel.faculty_id].seen.has(sel.pin)) {
         facultySelections[sel.faculty_id].seen.add(sel.pin);
+        const student = studentsMap[sel.pin];
         facultySelections[sel.faculty_id].list.push({
           name: student.name || "",
           pin: sel.pin || "",
@@ -599,7 +606,7 @@ exports.exportFacultyWiseGroupA = async (req, res) => {
     });
 
     const csvRows = [];
-    const facultyDocs = facultySnap.docs.filter((d) => d.data().group === "A");
+    const facultyDocs = facultySnap.docs;
 
     facultyDocs.forEach((d, index) => {
       const f = d.data();
@@ -662,14 +669,18 @@ exports.exportFacultyWiseGroupA = async (req, res) => {
 // Export faculty-wise CSV for Group B
 exports.exportFacultyWiseGroupB = async (req, res) => {
   try {
+    console.log("RUNNING GROUP B EXPORT");
     const [facultySnap, subjectsSnap, selectionsSnap, studentsSnap] =
       await Promise.all([
-        db.collection("faculty").get(),
+        db.collection("faculty").where("group", "==", "B").get(),
         db.collection("subjects").get(),
         db.collection("selections").get(),
-        db.collection("students").get(),
+        db.collection("students").where("group", "==", "B").get(),
       ]);
 
+    console.log("Faculty Count (Group B):", facultySnap.docs.length);
+    const groupBFacultyIds = new Set();
+    
     // Build lookup maps
     const subjectsMap = {};
     subjectsSnap.docs.forEach((d) => {
@@ -681,19 +692,21 @@ exports.exportFacultyWiseGroupB = async (req, res) => {
       studentsMap[d.id] = d.data();
     });
 
-    // Group selections by faculty_id, dedup by PIN per faculty, only for Group B faculty
+    // Build set of Group B faculty IDs for quick lookup
+    facultySnap.docs.forEach((d) => {
+      groupBFacultyIds.add(d.id);
+    });
+    console.log("Faculty IDs (Group B):", [...groupBFacultyIds]);
+
+    // Group selections by faculty_id, dedup by PIN per faculty, only for Group B
     const facultySelections = {};
     selectionsSnap.docs.forEach((d) => {
       const sel = d.data();
       if (!sel.faculty_id || !sel.pin) return;
 
-      // Check if faculty is in Group B
-      const facultyDoc = facultySnap.docs.find((f) => f.id === sel.faculty_id);
-      if (!facultyDoc || facultyDoc.data().group !== "B") return;
-
-      // Check if student is in Group B
-      const student = studentsMap[sel.pin];
-      if (!student || student.group !== "B") return;
+      // Only include if faculty is in Group B AND student is in Group B
+      if (!groupBFacultyIds.has(sel.faculty_id)) return;
+      if (!studentsMap[sel.pin]) return;
 
       if (!facultySelections[sel.faculty_id]) {
         facultySelections[sel.faculty_id] = { seen: new Set(), list: [] };
@@ -701,6 +714,7 @@ exports.exportFacultyWiseGroupB = async (req, res) => {
 
       if (!facultySelections[sel.faculty_id].seen.has(sel.pin)) {
         facultySelections[sel.faculty_id].seen.add(sel.pin);
+        const student = studentsMap[sel.pin];
         facultySelections[sel.faculty_id].list.push({
           name: student.name || "",
           pin: sel.pin || "",
@@ -711,7 +725,7 @@ exports.exportFacultyWiseGroupB = async (req, res) => {
     });
 
     const csvRows = [];
-    const facultyDocs = facultySnap.docs.filter((d) => d.data().group === "B");
+    const facultyDocs = facultySnap.docs;
 
     facultyDocs.forEach((d, index) => {
       const f = d.data();

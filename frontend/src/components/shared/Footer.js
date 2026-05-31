@@ -2,16 +2,6 @@ import React from "react";
 
 const mainDevelopers = [
   { name: "Dhanunjaya P", url: "https://github.com/codebydj" },
-  { name: "Haritha Kongi", url: "https://github.com/HarithaKongi" },
-  // { name: "member 2", url: "https://github.com/HarithaKongi" },
-];
-
-const teamMembers = [
-  { name: "M. Suhitha", url: "" },
-  { name: "|", url: "" },
-  { name: "G. Akshitha", url: "" },
-  { name: "|", url: "" },
-  { name: "B. Keerthana", url: "" },
 ];
 
 export default function Footer() {
@@ -41,22 +31,6 @@ export default function Footer() {
           </a>
         ))}
       </div>
-
-      {/* 🔹 Team Members */}
-      <div className="flex items-center gap-3">
-        <p className="text-sm text-gray-500 font-semibold">Assisted By :</p>
-
-        <div className="flex flex-wrap justify-center gap-3">
-          {teamMembers.map((user, i) => (
-            <p
-              key={i}
-              className="flex items-center gap-1  text-gray-500 text-xs font-medium font-display hover:bg-gray-100 transition cursor-default">
-              {user.name}
-            </p>
-          ))}
-        </div>
-      </div>
-      {/* Footer Text */}
       <p className="text-sm font-medium text-gray-700 text-center border-0 border-t-2 border-gray-300 pt-3 mt-3">
         © {new Date().getFullYear()} Department of CSE - Faculty Selection Portal
       </p>

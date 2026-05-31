@@ -2,6 +2,7 @@
 .env
 functions/.env
 frontend/.env
+frontend/.env.production
 *.env.local
 
 # ── Emulator data — local only ────────────────────────────────

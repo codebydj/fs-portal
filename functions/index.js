@@ -84,6 +84,8 @@ const {
   exportFacultySelectionsWithStudentsCSV,
   exportFacultyListGroupA, // New export for faculty list
   exportFacultyListGroupB, // New export for faculty list
+  exportFacultyWiseGroupA, // Group A faculty-wise export
+  exportFacultyWiseGroupB, // Group B faculty-wise export
 } = require("./controllers/exportController");
 const { verifyAdmin } = require("./middlewares/adminAuth");
 const { verifyStudent } = require("./middlewares/studentAuth");
@@ -124,6 +126,16 @@ app.post("/admin/import-students", verifyAdmin, importStudents);
 app.get("/admin/export-csv", verifyAdmin, exportCSV);
 app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
 app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
+app.get(
+  "/admin/export-faculty-wise-group-a",
+  verifyAdmin,
+  exportFacultyWiseGroupA,
+);
+app.get(
+  "/admin/export-faculty-wise-group-b",
+  verifyAdmin,
+  exportFacultyWiseGroupB,
+);
 app.get(
   "/admin/export-faculty-list-group-a",
   verifyAdmin,
