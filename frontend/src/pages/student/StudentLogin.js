@@ -73,14 +73,14 @@ export default function StudentLogin() {
   return (
     <div className="min-h-screen flex flex-col bg-blue-100">
       {/* Background pattern */}
-      <header className="border-b-2 flex justify-center bg-blue-700 border-blue-900 shadow-sm ">
-        {/* Logo */}
+      {/* <header className="border-b-2 flex justify-center bg-blue-700 border-blue-900 shadow-sm ">
+        
         <div className="flex flex-col items-center gap-1 flex-shrink-0 capitalize text-white py-4 font-sans">
           <div className="font-bold text-2xl">Rajeev Gandhi Memorial </div>
           <div className="text-sm "> College of Engineering & Technology</div>
           <div className="text-sm ">(AUTONOMOUS)</div>
         </div>
-      </header>
+      </header> */}
       <div className="flex-grow flex items-center justify-center p-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -90,7 +90,7 @@ export default function StudentLogin() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl">
-              <img src="/logo.png" alt="clg logo" />
+              {/* <img src="/logo.png" alt="clg logo" /> */}
             </div>
             <h1 className="text-2xl font-bold text-slate-900 font-display">
               Faculty Selection Portal

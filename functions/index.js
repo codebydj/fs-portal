@@ -40,16 +40,9 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
-      const allowed = allowedOrigins.some((o) =>
-        typeof o === "string" ? o === origin : o.test(origin),
-      );
-      callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
-    },
+    origin: true,
     credentials: true,
-  }),
+  })
 );
 
 app.use(express.json());
