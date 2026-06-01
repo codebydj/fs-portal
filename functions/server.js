@@ -52,6 +52,11 @@ app.post(
 // ── JSON body parsing for all other routes ────────────────────
 app.use(express.json());
 
+// Add a root route to confirm API is running
+app.get("/", (req, res) => {
+  res.json({ status: "API is running", version: "1.0" });
+});
+
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 const { studentLogin } = require("./controllers/authController");
