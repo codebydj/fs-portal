@@ -123,7 +123,6 @@ function SubjectAccordion({
   isOpen,
   onToggle,
   disabled,
-  userGroup,
 }) {
   const [faculty, setFaculty] = useState([]);
   const [loadingFaculty, setLoadingFaculty] = useState(true);
@@ -132,14 +131,15 @@ function SubjectAccordion({
     const q = query(
       collection(db, "faculty"),
       where("subject_id", "==", subject.id),
-      where("group", "==", userGroup),
+      // Removed group filtering as per unified system
+      // where("group", "==", userGroup), // userGroup is no longer used
     );
     const unsub = onSnapshot(q, (snap) => {
       setFaculty(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setLoadingFaculty(false);
     });
     return () => unsub();
-  }, [subject.id, userGroup]);
+  }, [subject.id]);
 
   const selectedFaculty = faculty.find((f) => f.id === selectedFacultyId);
   const isComplete = !!selectedFacultyId;
@@ -265,8 +265,8 @@ export default function SubjectAccordionList({
   subjects,
   selections,
   onSelect,
-  disabled,
-  userGroup,
+  disabled, // `userGroup` is no longer used
+  // userGroup,
 }) {
   const [openSubject, setOpenSubject] = useState(subjects[0]?.id || null);
 
@@ -302,7 +302,7 @@ export default function SubjectAccordionList({
           isOpen={openSubject === subject.id}
           onToggle={() => handleToggle(subject.id)}
           disabled={disabled}
-          userGroup={userGroup}
+          // userGroup is no longer used
         />
       ))}
     </div>

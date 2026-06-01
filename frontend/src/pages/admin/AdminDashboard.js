@@ -30,11 +30,7 @@ import {
   exportFacultyCSV,
   exportStudentsCSV,
   importStudents,
-  exportStudentWiseGroupA,
-  exportStudentWiseGroupB,
-  resetFacultyByGroup,
-  exportFacultyListGroupA,
-  exportFacultyListGroupB,
+  exportFacultyListCSV,
 } from "../../services/api";
 import {
   useRealtimeFaculty,
@@ -307,54 +303,54 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
 }
 
 // ── Seat Bar ──────────────────────────────────────────────────
-function SeatBar({ faculty, subjects = [], onView }) {
-  const pct =
-    faculty.max_limit > 0
-      ? (faculty.current_count / faculty.max_limit) * 100
-      : 0;
-  const barColor =
-    pct >= 80 ? "bg-red-500" : pct >= 50 ? "bg-yellow-500" : "bg-green-500";
-  const subject = subjects.find((s) => s.id === faculty.subject_id);
-  return (
-    <div className="py-2.5 border-b border-slate-100 last:border-0">
-      <div className="flex items-center justify-between mb-1.5 gap-2">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="text-sm font-medium text-slate-800 truncate">
-            {faculty.name}
-          </span>
-          {subject && (
-            <>
-              <span className="text-slate-300 flex-shrink-0">—</span>
-              <span className="text-xs text-slate-500 truncate flex-shrink-0">
-                {subject.name}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-slate-500 font-mono">
-            {faculty.current_count}/{faculty.max_limit}
-          </span>
-          {faculty.current_count > 0 && (
-            <button
-              onClick={() => onView(faculty)}
-              className="text-xs text-primary-600 hover:text-primary-800 hover:bg-primary-50 px-2 py-0.5 rounded transition-colors font-medium">
-              View
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-        <motion.div
-          className={`h-full rounded-full ${barColor}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        />
-      </div>
-    </div>
-  );
-}
+// function SeatBar({ faculty, subjects = [], onView }) {
+//   const pct =
+//     faculty.max_limit > 0
+//       ? (faculty.current_count / faculty.max_limit) * 100
+//       : 0;
+//   const barColor =
+//     pct >= 80 ? "bg-red-500" : pct >= 50 ? "bg-yellow-500" : "bg-green-500";
+//   const subject = subjects.find((s) => s.id === faculty.subject_id);
+//   return (
+//     <div className="py-2.5 border-b border-slate-100 last:border-0">
+//       <div className="flex items-center justify-between mb-1.5 gap-2">
+//         <div className="flex items-center gap-1.5 min-w-0 flex-1">
+//           <span className="text-sm font-medium text-slate-800 truncate">
+//             {faculty.name}
+//           </span>
+//           {subject && (
+//             <>
+//               <span className="text-slate-300 flex-shrink-0">—</span>
+//               <span className="text-xs text-slate-500 truncate flex-shrink-0">
+//                 {subject.name}
+//               </span>
+//             </>
+//           )}
+//         </div>
+//         <div className="flex items-center gap-2 flex-shrink-0">
+//           <span className="text-xs text-slate-500 font-mono">
+//             {faculty.current_count}/{faculty.max_limit}
+//           </span>
+//           {faculty.current_count > 0 && (
+//             <button
+//               onClick={() => onView(faculty)}
+//               className="text-xs text-primary-600 hover:text-primary-800 hover:bg-primary-50 px-2 py-0.5 rounded transition-colors font-medium">
+//               View
+//             </button>
+//           )}
+//         </div>
+//       </div>
+//       <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+//         <motion.div
+//           className={`h-full rounded-full ${barColor}`}
+//           initial={{ width: 0 }}
+//           animate={{ width: `${pct}%` }}
+//           transition={{ duration: 0.6, ease: "easeOut" }}
+//         />
+//       </div>
+//     </div>
+//   );
+// }
 
 // ── Dashboard Tab ─────────────────────────────────────────────
 function DashboardTab({ stats, error }) {
@@ -392,7 +388,7 @@ function DashboardTab({ stats, error }) {
     );
   }
 
-  if (loading || !stats || !stats.groupA || !stats.groupB)
+  if (loading || !stats || !stats.overall)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -400,197 +396,17 @@ function DashboardTab({ stats, error }) {
       </div>
     );
 
-  const GroupDashboard = ({ groupData, groupName, color }) => {
-    // Defensively merge with defaults to ensure properties exist, preventing "—" from showing.
-    const safeGroupData = {
-      totalStudents: 0,
-      submittedStudents: 0,
-      pendingStudents: 0,
-      faculty: [],
-      recentSelections: [],
-      ...groupData,
-    };
-    return (
-      <>
-        <h3 className="font-semibold text-slate-900 font-display text-lg">
-          Group {groupName} Dashboard
-        </h3>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Students"
-            value={safeGroupData.totalStudents}
-            color={color}
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Submitted"
-            value={safeGroupData.submittedStudents}
-            color="green"
-            sub={`${safeGroupData.totalStudents > 0 ? Math.round((safeGroupData.submittedStudents / safeGroupData.totalStudents) * 100) : 0}% done`}
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Pending"
-            value={safeGroupData.pendingStudents}
-            color="yellow"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Subjects"
-            value={stats.subjects?.length}
-            color="slate"
-            sub={`${safeGroupData.faculty?.length || 0} faculty`}
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-            }
-          />
-        </div>
-
-        {safeGroupData.totalStudents > 0 && (
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold text-slate-900 font-display text-sm">
-                Group {groupName} Submission Progress
-              </h4>
-              <span className="text-sm font-bold text-primary-600">
-                {Math.round(
-                  (safeGroupData.submittedStudents /
-                    safeGroupData.totalStudents) *
-                    100,
-                )}
-                %
-              </span>
-            </div>
-            <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-primary-600 rounded-full"
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${(safeGroupData.submittedStudents / safeGroupData.totalStudents) * 100}%`,
-                }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5">
-              <span className="text-xs text-slate-400">
-                {safeGroupData.submittedStudents} submitted
-              </span>
-              <span className="text-xs text-slate-400">
-                {safeGroupData.pendingStudents} pending
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="card p-5">
-            <h4 className="font-semibold text-slate-900 font-display mb-4">
-              Group {groupName} Faculty Seat Fill
-            </h4>
-            {!safeGroupData.faculty?.length ? (
-              <p className="text-slate-400 text-sm text-center py-6">
-                No faculty added yet for Group {groupName}.
-              </p>
-            ) : (
-              <div>
-                {safeGroupData.faculty.map((f) => (
-                  <SeatBar
-                    key={f.id}
-                    faculty={f}
-                    subjects={stats.subjects || []}
-                    onView={(fac) => setViewFaculty(fac)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="card p-5">
-            <h4 className="font-semibold text-slate-900 font-display mb-4">
-              Group {groupName} Recent Submissions
-            </h4>
-            {!safeGroupData.recentSelections?.length ? (
-              <p className="text-slate-400 text-sm text-center py-6">
-                No submissions yet for Group {groupName}.
-              </p>
-            ) : (
-              <div className="overflow-y-auto max-h-64 divide-y divide-slate-100">
-                {safeGroupData.recentSelections.map((sel, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between py-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
-                      <span className="font-mono text-xs font-medium text-slate-700">
-                        {sel.pin}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      {formatTime(sel.timestamp)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">
-              Showing last {safeGroupData.recentSelections?.length || 0} unique
-              submissions
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  };
+  const overall = stats.overall || {};
+  const totalStudents = overall.totalStudents || 0;
+  const submittedStudents = overall.submittedStudents || 0;
+  const pendingStudents = overall.pendingStudents || 0;
+  const facultyCount = overall.faculty?.length || 0;
+  const subjectCount = stats.subjects?.length || 0;
+  const completionRate = totalStudents
+    ? Math.round((submittedStudents / totalStudents) * 100)
+    : 0;
+  const subjectBreakdown = overall.subjectBreakdown || [];
+  const recentSelections = overall.recentSelections || [];
 
   const viewSubject = viewFaculty
     ? (stats.subjects || []).find((s) => s.id === viewFaculty.subject_id)
@@ -598,8 +414,195 @@ function DashboardTab({ stats, error }) {
 
   return (
     <div className="space-y-8">
-      <GroupDashboard groupData={stats.groupA} groupName="A" color="blue" />
-      <GroupDashboard groupData={stats.groupB} groupName="B" color="purple" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Students"
+          value={totalStudents}
+          color="blue"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Submitted"
+          value={submittedStudents}
+          color="green"
+          sub={`${completionRate}% done`}
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Pending"
+          value={pendingStudents}
+          color="yellow"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Faculty"
+          value={facultyCount}
+          color="slate"
+          sub={`${subjectCount} subjects`}
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+          }
+        />
+      </div>
+
+      <div className="grid xl:grid-cols-3 gap-6">
+        <div className="card p-5 xl:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 font-display">
+                Subject Capacity
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Overview of total seats and filled seats per subject.
+              </p>
+            </div>
+            <span className="text-sm text-slate-500">
+              {subjectBreakdown.length} subjects
+            </span>
+          </div>
+          {!subjectBreakdown.length ? (
+            <div className="py-14 text-center text-slate-400 text-sm">
+              No subject capacity data available.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {subjectBreakdown.map((item) => {
+                const pct =
+                  item.totalSeats > 0
+                    ? Math.round((item.filledSeats / item.totalSeats) * 100)
+                    : 0;
+                return (
+                  <div key={item.subject.id}>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {item.subject.name}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {item.filledSeats}/{item.totalSeats} seats filled
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs font-semibold ${pct >= 80 ? "text-red-600" : pct >= 50 ? "text-amber-600" : "text-emerald-600"}`}>
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${pct >= 80 ? "bg-red-500" : pct >= 50 ? "bg-amber-500" : "bg-emerald-500"}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 font-display">
+                Recent Selections
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Latest student submissions.
+              </p>
+            </div>
+            <span className="text-sm text-slate-500">
+              {recentSelections.length} entries
+            </span>
+          </div>
+          {!recentSelections.length ? (
+            <div className="py-14 text-center text-slate-400 text-sm">
+              No recent selections yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentSelections.map((sel) => (
+                <div
+                  key={sel.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      {sel.pin}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatTime(sel.timestamp)}
+                    </p>
+                  </div>
+                  {sel.faculty_id && (
+                    <button
+                      onClick={() => {
+                        const faculty = overall.faculty?.find(
+                          (f) => f.id === sel.faculty_id,
+                        );
+                        if (faculty) setViewFaculty(faculty);
+                      }}
+                      className="text-xs text-primary-600 hover:text-primary-800 hover:bg-primary-50 px-3 py-1.5 rounded-lg transition-colors">
+                      View Faculty
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <FacultyStudentsModal
         faculty={viewFaculty}
         subject={viewSubject}
@@ -953,14 +956,12 @@ function SubjectsTab({ stats, onRefresh }) {
   );
 }
 
-// ── Faculty Tab (Corrected) ───────────────────────────────────
+// ── Faculty Tab ─────────────────────────────────────────────
 function FacultyTab({ stats, onRefresh }) {
-  // CHANGE 1: Removed "experience" from initial form state
   const [form, setForm] = useState({
     name: "",
     subject_id: "",
     max_limit: "",
-    group: "A",
   });
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -968,22 +969,10 @@ function FacultyTab({ stats, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editLoading, setEditLoading] = useState(false);
-  const [showResetAllConfirm, setShowResetAllConfirm] = useState(false); // For all faculty
-  const [resettingAll, setResettingAll] = useState(false);
-  const [showResetGroupAConfirm, setShowResetGroupAConfirm] = useState(false); // For Group A faculty
-  const [resettingGroupA, setResettingGroupA] = useState(false);
-  const [showResetGroupBConfirm, setShowResetGroupBConfirm] = useState(false); // For Group B faculty
-  const [resettingGroupB, setResettingGroupB] = useState(false);
-
-  const [filterSubject, setFilterSubject] = useState("");
-  const [filterGroup, setFilterGroup] = useState("");
-
-  const [sortKey, setSortKey] = useState("name"); // Default sort key
-  const [sortDir, setSortDir] = useState("asc"); // Default sort direction
-  const [collapsedFacultyTables, setCollapsedFacultyTables] = useState({
-    A: false,
-    B: false,
-  });
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [sortKey, setSortKey] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -996,18 +985,17 @@ function FacultyTab({ stats, onRefresh }) {
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.subject_id || !form.max_limit || !form.group)
-      return toast.error("Name, subject, max seats and group required");
+    if (!form.name || !form.subject_id || !form.max_limit)
+      return toast.error("Name, subject, and max seats required");
     setLoading(true);
     try {
-      // CHANGE 2: Removed experience from addFaculty call
       await addFaculty({
-        ...form,
+        name: form.name.trim(),
+        subject_id: form.subject_id,
         max_limit: Number(form.max_limit),
       });
       toast.success("Faculty added!");
-      // CHANGE 3: Removed "experience" from reset
-      setForm({ name: "", subject_id: "", max_limit: "", group: "A" });
+      setForm({ name: "", subject_id: "", max_limit: "" });
       onRefresh();
     } catch (err) {
       toast.error(err.error || "Failed to add faculty");
@@ -1018,14 +1006,13 @@ function FacultyTab({ stats, onRefresh }) {
 
   const startEdit = (f) => {
     setEditingId(f.id);
-    // CHANGE 4: Removed experience from edit form
     setEditForm({
       name: f.name,
       subject_id: f.subject_id,
       max_limit: f.max_limit,
-      group: f.group,
     });
   };
+
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({});
@@ -1034,16 +1021,16 @@ function FacultyTab({ stats, onRefresh }) {
   const handleEdit = async (id) => {
     setEditLoading(true);
     try {
-      // CHANGE 5: Removed experience from editFaculty call
       await editFaculty(id, {
-        ...editForm,
+        name: editForm.name.trim(),
+        subject_id: editForm.subject_id,
         max_limit: Number(editForm.max_limit),
       });
       toast.success("Faculty updated!");
       cancelEdit();
       onRefresh();
     } catch (err) {
-      toast.error(err.error || "Failed to update");
+      toast.error(err.error || "Failed to update faculty");
     } finally {
       setEditLoading(false);
     }
@@ -1057,51 +1044,23 @@ function FacultyTab({ stats, onRefresh }) {
       setDeleteId(null);
       onRefresh();
     } catch (err) {
-      toast.error(err.error || "Failed to delete");
+      toast.error(err.error || "Failed to delete faculty");
     } finally {
       setDeleting(false);
     }
   };
 
-  const handleResetAllFaculty = async () => {
-    setResettingAll(true);
+  const handleResetAll = async () => {
+    setResetting(true);
     try {
       await resetAllFaculty();
       toast.success("All faculty deleted.");
-      setShowResetAllConfirm(false);
+      setShowResetConfirm(false);
       onRefresh();
     } catch (err) {
-      toast.error(err.error || "Failed to reset all faculty");
+      toast.error(err.error || "Failed to reset faculty");
     } finally {
-      setResettingAll(false);
-    }
-  };
-
-  const handleResetGroupAFaculty = async () => {
-    setResettingGroupA(true);
-    try {
-      await resetFacultyByGroup("A");
-      toast.success("All faculty for Group A deleted.");
-      setShowResetGroupAConfirm(false);
-      onRefresh();
-    } catch (err) {
-      toast.error(err.error || "Failed to reset Group A faculty");
-    } finally {
-      setResettingGroupA(false);
-    }
-  };
-
-  const handleResetGroupBFaculty = async () => {
-    setResettingGroupB(true);
-    try {
-      await resetFacultyByGroup("B");
-      toast.success("All faculty for Group B deleted.");
-      setShowResetGroupBConfirm(false);
-      onRefresh();
-    } catch (err) {
-      toast.error(err.error || "Failed to reset Group B faculty");
-    } finally {
-      setResettingGroupB(false);
+      setResetting(false);
     }
   };
 
@@ -1112,10 +1071,12 @@ function FacultyTab({ stats, onRefresh }) {
       let aVal = a[sortKey] ?? "";
       let bVal = b[sortKey] ?? "";
 
-      // Custom sort for 'Seats' (max_limit)
       if (sortKey === "seats") {
-        aVal = a.max_limit;
-        bVal = b.max_limit;
+        aVal = Number(a.max_limit) || 0;
+        bVal = Number(b.max_limit) || 0;
+      } else if (sortKey === "current_count") {
+        aVal = Number(a.current_count) || 0;
+        bVal = Number(b.current_count) || 0;
       } else if (sortKey === "subject") {
         const subjectA = stats.subjects?.find((s) => s.id === a.subject_id);
         const subjectB = stats.subjects?.find((s) => s.id === b.subject_id);
@@ -1125,7 +1086,6 @@ function FacultyTab({ stats, onRefresh }) {
 
       if (typeof aVal === "string") aVal = aVal.toLowerCase();
       if (typeof bVal === "string") bVal = bVal.toLowerCase();
-
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
       return 0;
@@ -1133,23 +1093,13 @@ function FacultyTab({ stats, onRefresh }) {
     return sortable;
   }, [stats?.faculty, stats?.subjects, sortKey, sortDir]);
 
-  const facultyA = sortedFaculty
-    .filter((f) => f.group === "A")
-    .filter((f) => !filterSubject || f.subject_id === filterSubject);
-  const facultyB = sortedFaculty
-    .filter((f) => f.group === "B")
-    .filter((f) => !filterSubject || f.subject_id === filterSubject);
-
   return (
     <div className="space-y-6">
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 font-display mb-4">
           Add New Faculty
         </h3>
-        <form
-          // CHANGE 6: Removed experience field from Add form, changed grid
-          onSubmit={handleAdd}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <form onSubmit={handleAdd} className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className="label">Faculty Name</label>
             <input
@@ -1188,20 +1138,7 @@ function FacultyTab({ stats, onRefresh }) {
               }
             />
           </div>
-          <div>
-            <label className="label">Group</label>
-            <select
-              className="input-field"
-              value={form.group}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, group: e.target.value }))
-              }>
-              <option value="A">Group A</option>
-              <option value="B">Group B</option>
-            </select>
-          </div>
-          <div className="flex items-end col-span-2 sm:col-span-4">
-            {/* CHANGE 7: Experience field REMOVED from here */}
+          <div className="sm:col-span-3 flex items-end">
             <button
               type="submit"
               className="btn-primary w-full"
@@ -1212,466 +1149,220 @@ function FacultyTab({ stats, onRefresh }) {
         </form>
       </div>
 
-      <div className="card p-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="font-semibold text-slate-900 font-display">
-            Faculty Filters
-          </h3>
-          <div className="flex items-center gap-3">
-            <select
-              className="input-field py-1.5 text-sm w-48"
-              value={filterSubject}
-              onChange={(e) => setFilterSubject(e.target.value)}>
-              <option value="">All Subjects</option>
-              {stats?.subjects?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="input-field py-1.5 text-sm w-32"
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}>
-              <option value="">All Groups</option>
-              <option value="A">Group A</option>
-              <option value="B">Group B</option>
-            </select>
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-slate-900 font-display">
+              Faculty ({sortedFaculty.length})
+            </h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Manage all faculty in a single unified system.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <DownloadCSVButton
+              label="Download Faculty List"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyListCSV(),
+                  `faculty_list_${Date.now()}.csv`,
+                )
+              }
+            />
+            <DownloadCSVButton
+              label="Download Faculty Selections"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyCSV(),
+                  `faculty_selections_${Date.now()}.csv`,
+                )
+              }
+            />
+            {sortedFaculty.length > 0 && (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="text-xs text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                Delete All Faculty
+              </button>
+            )}
           </div>
         </div>
+
+        {!sortedFaculty.length ? (
+          <div className="py-14 text-center text-slate-400 text-sm">
+            No faculty added yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => handleSort("name")}>
+                    <span className="flex items-center gap-1">
+                      Name
+                      <SortIcon
+                        column="name"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                      />
+                    </span>
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => handleSort("subject")}>
+                    <span className="flex items-center gap-1">
+                      Subject
+                      <SortIcon
+                        column="subject"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                      />
+                    </span>
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => handleSort("seats")}>
+                    <span className="flex items-center gap-1">
+                      Seats
+                      <SortIcon
+                        column="seats"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                      />
+                    </span>
+                  </th>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => handleSort("current_count")}>
+                    <span className="flex items-center gap-1">
+                      Filled
+                      <SortIcon
+                        column="current_count"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                      />
+                    </span>
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedFaculty.map((f) => {
+                  const subject = stats.subjects?.find(
+                    (s) => s.id === f.subject_id,
+                  );
+                  const isEditing = editingId === f.id;
+                  return (
+                    <tr
+                      key={f.id}
+                      className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <input
+                            className="input-field py-1 text-sm w-full"
+                            value={editForm.name}
+                            onChange={(e) =>
+                              setEditForm((p) => ({
+                                ...p,
+                                name: e.target.value,
+                              }))
+                            }
+                          />
+                        ) : (
+                          <span className="font-medium text-slate-800">
+                            {f.name}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <select
+                            className="input-field py-1 text-sm w-full"
+                            value={editForm.subject_id}
+                            onChange={(e) =>
+                              setEditForm((p) => ({
+                                ...p,
+                                subject_id: e.target.value,
+                              }))
+                            }>
+                            {stats.subjects?.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-slate-600">
+                            {subject?.name || "—"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="input-field py-1 text-sm w-full"
+                            value={editForm.max_limit}
+                            onChange={(e) =>
+                              setEditForm((p) => ({
+                                ...p,
+                                max_limit: e.target.value,
+                              }))
+                            }
+                          />
+                        ) : (
+                          <span className="text-slate-700">{f.max_limit}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-slate-700"}`}>
+                          {f.current_count}/{f.max_limit}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(f.id)}
+                              disabled={editLoading}
+                              className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
+                              {editLoading ? "..." : "Save"}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEdit(f)}
+                              className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(f.id)}
+                              className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Group A Faculty Table */}
-      {(filterGroup === "" || filterGroup === "A") && (
-        <div
-          className="card overflow-hidden"
-          key={`faculty-a-${facultyA.length}`}>
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="font-semibold text-slate-900 font-display">
-                Group A Faculty ({facultyA.length})
-              </h3>
-              <button
-                onClick={() =>
-                  setCollapsedFacultyTables((prev) => ({ ...prev, A: !prev.A }))
-                }
-                className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
-                <svg
-                  className={`w-5 h-5 transform transition-transform ${collapsedFacultyTables.A ? "rotate-180" : ""}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-            </div>
-            {!collapsedFacultyTables.A && (
-              <div className="flex items-center gap-2 w-full mt-3">
-                <DownloadCSVButton
-                  label="Download CSV"
-                  onClick={() =>
-                    // Export faculty list with subject and seats
-                    downloadBlob(
-                      exportFacultyListGroupA(),
-                      `faculty_list_group_a_${Date.now()}.csv`,
-                    )
-                  }
-                />
-                {facultyA.length > 0 && (
-                  <button
-                    onClick={() => setShowResetGroupAConfirm(true)}
-                    className="text-xs text-red-600 border border-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                    Delete All Group A Faculty
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          {!collapsedFacultyTables.A && (
-            <>
-              {!facultyA.length ? (
-                <div className="py-10 text-center text-slate-400 text-sm">
-                  No faculty found for Group A with current filters.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("name")}>
-                          <span className="flex items-center gap-1">
-                            Name
-                            <SortIcon
-                              column="name"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("subject")}>
-                          <span className="flex items-center gap-1">
-                            Subject
-                            <SortIcon
-                              column="subject"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("seats")}>
-                          <span className="flex items-center gap-1">
-                            Seats
-                            <SortIcon
-                              column="seats"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facultyA.map((f) => {
-                        const subject = stats?.subjects?.find(
-                          (s) => s.id === f.subject_id,
-                        );
-                        const isEditing = editingId === f.id;
-                        return (
-                          <tr
-                            key={f.id}
-                            className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <input
-                                  className="input-field py-1 text-sm w-36"
-                                  value={editForm.name}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      name: e.target.value,
-                                    }))
-                                  }
-                                />
-                              ) : (
-                                <span className="font-medium text-slate-800">
-                                  {f.name}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <select
-                                  className="input-field py-1 text-sm"
-                                  value={editForm.subject_id}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      subject_id: e.target.value,
-                                    }))
-                                  }>
-                                  {stats?.subjects?.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                      {s.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="text-slate-600">
-                                  {subject?.name || "—"}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  className="input-field py-1 text-sm w-20"
-                                  value={editForm.max_limit}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      max_limit: e.target.value,
-                                    }))
-                                  }
-                                />
-                              ) : (
-                                <span
-                                  className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
-                                  {f.current_count}/{f.max_limit}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleEdit(f.id)}
-                                    disabled={editLoading}
-                                    className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
-                                    {editLoading ? "..." : "Save"}
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => startEdit(f)}
-                                    className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteId(f.id)}
-                                    className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Group B Faculty Table */}
-      {(filterGroup === "" || filterGroup === "B") && (
-        <div
-          className="card overflow-hidden"
-          key={`faculty-b-${facultyB.length}`}>
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="font-semibold text-slate-900 font-display">
-                Group B Faculty ({facultyB.length})
-              </h3>
-              <button
-                onClick={() =>
-                  setCollapsedFacultyTables((prev) => ({ ...prev, B: !prev.B }))
-                }
-                className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
-                <svg
-                  className={`w-5 h-5 transform transition-transform ${collapsedFacultyTables.B ? "rotate-180" : ""}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-            </div>
-            {!collapsedFacultyTables.B && (
-              <div className="flex items-center gap-2 w-full mt-3">
-                <DownloadCSVButton
-                  label="Download CSV"
-                  onClick={() =>
-                    // Export faculty list with subject and seats
-                    downloadBlob(
-                      exportFacultyListGroupB(),
-                      `faculty_list_group_b_${Date.now()}.csv`,
-                    )
-                  }
-                />
-                {facultyB.length > 0 && (
-                  <button
-                    onClick={() => setShowResetGroupBConfirm(true)}
-                    className="text-xs text-red-600 border border-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                    Delete All Group B Faculty
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          {!collapsedFacultyTables.B && (
-            <>
-              {!facultyB.length ? (
-                <div className="py-10 text-center text-slate-400 text-sm">
-                  No faculty found for Group B with current filters.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("name")}>
-                          <span className="flex items-center gap-1">
-                            Name
-                            <SortIcon
-                              column="name"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("subject")}>
-                          <span className="flex items-center gap-1">
-                            Subject
-                            <SortIcon
-                              column="subject"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th
-                          className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none"
-                          onClick={() => handleSort("seats")}>
-                          <span className="flex items-center gap-1">
-                            Seats
-                            <SortIcon
-                              column="seats"
-                              sortKey={sortKey}
-                              sortDir={sortDir}
-                            />
-                          </span>
-                        </th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facultyB.map((f) => {
-                        const subject = stats?.subjects?.find(
-                          (s) => s.id === f.subject_id,
-                        );
-                        const isEditing = editingId === f.id;
-                        return (
-                          <tr
-                            key={f.id}
-                            className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <input
-                                  className="input-field py-1 text-sm w-36"
-                                  value={editForm.name}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      name: e.target.value,
-                                    }))
-                                  }
-                                />
-                              ) : (
-                                <span className="font-medium text-slate-800">
-                                  {f.name}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <select
-                                  className="input-field py-1 text-sm"
-                                  value={editForm.subject_id}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      subject_id: e.target.value,
-                                    }))
-                                  }>
-                                  {stats?.subjects?.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                      {s.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="text-slate-600">
-                                  {subject?.name || "—"}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  className="input-field py-1 text-sm w-20"
-                                  value={editForm.max_limit}
-                                  onChange={(e) =>
-                                    setEditForm((p) => ({
-                                      ...p,
-                                      max_limit: e.target.value,
-                                    }))
-                                  }
-                                />
-                              ) : (
-                                <span
-                                  className={`font-medium ${f.current_count >= f.max_limit ? "text-red-600" : "text-green-600"}`}>
-                                  {f.current_count}/{f.max_limit}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isEditing ? (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleEdit(f.id)}
-                                    disabled={editLoading}
-                                    className="text-xs text-green-700 hover:bg-green-50 px-2.5 py-1 rounded font-medium">
-                                    {editLoading ? "..." : "Save"}
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="text-xs text-slate-500 hover:bg-slate-100 px-2.5 py-1 rounded">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => startEdit(f)}
-                                    className="text-xs text-primary-600 hover:bg-primary-50 px-2.5 py-1 rounded">
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteId(f.id)}
-                                    className="text-xs text-red-600 hover:bg-red-50 px-2.5 py-1 rounded">
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
       <ConfirmModal
         open={!!deleteId}
         title="Delete Faculty"
@@ -1683,34 +1374,14 @@ function FacultyTab({ stats, onRefresh }) {
         loading={deleting}
       />
       <ConfirmModal
-        open={showResetAllConfirm}
+        open={showResetConfirm}
         title="Reset All Faculty?"
         message="This will permanently delete ALL faculty members. This cannot be undone."
         danger
         confirmText="Delete All Faculty"
-        onConfirm={handleResetAllFaculty}
-        onCancel={() => setShowResetAllConfirm(false)}
-        loading={resettingAll}
-      />
-      <ConfirmModal
-        open={showResetGroupAConfirm}
-        title="Delete All Group A Faculty?"
-        message="This will permanently delete ALL faculty members for Group A. This cannot be undone."
-        danger
-        confirmText="Delete Group A Faculty"
-        onConfirm={handleResetGroupAFaculty}
-        onCancel={() => setShowResetGroupAConfirm(false)}
-        loading={resettingGroupA}
-      />
-      <ConfirmModal
-        open={showResetGroupBConfirm}
-        title="Delete All Group B Faculty?"
-        message="This will permanently delete ALL faculty members for Group B. This cannot be undone."
-        danger
-        confirmText="Delete Group B Faculty"
-        onConfirm={handleResetGroupBFaculty}
-        onCancel={() => setShowResetGroupBConfirm(false)}
-        loading={resettingGroupB}
+        onConfirm={handleResetAll}
+        onCancel={() => setShowResetConfirm(false)}
+        loading={resetting}
       />
     </div>
   );
@@ -1731,10 +1402,6 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
   const [resetting, setResetting] = useState(false);
   // const [filterBranch, setFilterBranch] = useState("");
   // const [filterYear, setFilterYear] = useState("");
-  const [collapsedTables, setCollapsedTables] = useState({
-    A: false,
-    B: false,
-  });
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const fetchStudents = useCallback(async () => {
@@ -1847,9 +1514,6 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
     if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
     return 0;
   });
-
-  const studentsA = sorted.filter((s) => s.group?.toUpperCase() === "A");
-  const studentsB = sorted.filter((s) => s.group?.toUpperCase() === "B");
 
   const COLS = [
     { key: "name", label: "Name" },
@@ -1999,292 +1663,93 @@ function StudentsTab({ onRefresh, refreshTrigger }) {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Group A Students Table */}
-            <div
-              className="card overflow-hidden"
-              key={`students-a-${studentsA.length}`}>
-              <div className="px-5 py-4 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-slate-900 font-display">
-                    Group A Students ({studentsA.length})
-                  </h3>
-                  <button
-                    onClick={() =>
-                      setCollapsedTables((prev) => ({ ...prev, A: !prev.A }))
-                    }
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
-                    <svg
-                      className={`w-5 h-5 transform transition-transform ${collapsedTables.A ? "rotate-180" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              {!collapsedTables.A && (
-                <>
-                  {studentsA.length === 0 ? (
-                    <div className="py-10 text-center text-slate-400 text-sm">
-                      No students found for Group A.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                          <tr>
-                            {COLS.map((col) => (
-                              <th
-                                key={col.key}
-                                onClick={() => handleSort(col.key)}
-                                className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
-                                <span className="flex items-center gap-1">
-                                  {col.label}
-                                  <SortIcon
-                                    column={col.key}
-                                    sortKey={sortKey}
-                                    sortDir={sortDir}
-                                  />
-                                </span>
-                              </th>
-                            ))}
-                            <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                              Action
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <AnimatePresence initial={false}>
-                            {studentsA.map((s) => (
-                              <motion.tr
-                                key={s.id}
-                                layout
-                                initial={{ opacity: 0, y: -4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ duration: 0.15 }}
-                                className="border-b border-slate-100 hover:bg-slate-50">
-                                <td className="px-5 py-3 text-slate-800 font-medium">
-                                  {s.name || (
-                                    <span className="text-slate-300 italic text-xs">
-                                      —
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-5 py-3">
-                                  <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                    {s.pin}
-                                  </span>
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.branch || "—"}
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.year || "—"}
-                                </td>
-                                <td className="px-5 py-3">
-                                  {s.has_submitted ? (
-                                    <span className="badge-green">
-                                      ✓ Submitted
-                                    </span>
-                                  ) : (
-                                    <span className="badge-yellow">
-                                      Pending
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.submitted_at
-                                    ? parseSubmittedAt(
-                                        s.submitted_at,
-                                      )?.toLocaleString("en-IN", {
-                                        year: "numeric",
-                                        month: "short",
-                                        day: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        hour12: true,
-                                      })
-                                    : "—"}
-                                </td>
-                                <td className="px-5 py-3 text-right">
-                                  <button
-                                    onClick={() => setDeletePin(s.pin)}
-                                    className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
-                                    Delete
-                                  </button>
-                                </td>
-                              </motion.tr>
-                            ))}
-                          </AnimatePresence>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                    {sortKey && (
-                      <p className="text-xs text-slate-400">
-                        Sorted by{" "}
-                        <span className="font-medium text-slate-600">
-                          {sortKey}
-                        </span>{" "}
-                        ({sortDir === "asc" ? "A→Z" : "Z→A"})
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Group B Students Table */}
-            <div
-              className="card overflow-hidden"
-              key={`students-b-${studentsB.length}`}>
-              <div className="px-5 py-4 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-slate-900 font-display">
-                    Group B Students ({studentsB.length})
-                  </h3>
-                  <button
-                    onClick={() =>
-                      setCollapsedTables((prev) => ({ ...prev, B: !prev.B }))
-                    }
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded transition-colors">
-                    <svg
-                      className={`w-5 h-5 transform transition-transform ${collapsedTables.B ? "rotate-180" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              {!collapsedTables.B && (
-                <>
-                  {studentsB.length === 0 ? (
-                    <div className="py-10 text-center text-slate-400 text-sm">
-                      No students found for Group B.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                          <tr>
-                            {COLS.map((col) => (
-                              <th
-                                key={col.key}
-                                onClick={() => handleSort(col.key)}
-                                className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
-                                <span className="flex items-center gap-1">
-                                  {col.label}
-                                  <SortIcon
-                                    column={col.key}
-                                    sortKey={sortKey}
-                                    sortDir={sortDir}
-                                  />
-                                </span>
-                              </th>
-                            ))}
-                            <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
-                              Action
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <AnimatePresence initial={false}>
-                            {studentsB.map((s) => (
-                              <motion.tr
-                                key={s.id}
-                                layout
-                                initial={{ opacity: 0, y: -4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ duration: 0.15 }}
-                                className="border-b border-slate-100 hover:bg-slate-50">
-                                <td className="px-5 py-3 text-slate-800 font-medium">
-                                  {s.name || (
-                                    <span className="text-slate-300 italic text-xs">
-                                      —
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-5 py-3">
-                                  <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                    {s.pin}
-                                  </span>
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.branch || "—"}
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.year || "—"}
-                                </td>
-                                <td className="px-5 py-3">
-                                  {s.has_submitted ? (
-                                    <span className="badge-green">
-                                      ✓ Submitted
-                                    </span>
-                                  ) : (
-                                    <span className="badge-yellow">
-                                      Pending
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-5 py-3 text-slate-600">
-                                  {s.submitted_at
-                                    ? parseSubmittedAt(
-                                        s.submitted_at,
-                                      )?.toLocaleString("en-IN", {
-                                        year: "numeric",
-                                        month: "short",
-                                        day: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        hour12: true,
-                                      })
-                                    : "—"}
-                                </td>
-                                <td className="px-5 py-3 text-right">
-                                  <button
-                                    onClick={() => setDeletePin(s.pin)}
-                                    className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
-                                    Delete
-                                  </button>
-                                </td>
-                              </motion.tr>
-                            ))}
-                          </AnimatePresence>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                    {sortKey && (
-                      <p className="text-xs text-slate-400">
-                        Sorted by{" "}
-                        <span className="font-medium text-slate-600">
-                          {sortKey}
-                        </span>{" "}
-                        ({sortDir === "asc" ? "A→Z" : "Z→A"})
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  {COLS.map((col) => (
+                    <th
+                      key={col.key}
+                      onClick={() => handleSort(col.key)}
+                      className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer hover:text-primary-600 hover:bg-slate-100 transition-colors select-none">
+                      <span className="flex items-center gap-1">
+                        {col.label}
+                        <SortIcon
+                          column={col.key}
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                        />
+                      </span>
+                    </th>
+                  ))}
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence initial={false}>
+                  {sorted.map((s) => (
+                    <motion.tr
+                      key={s.id}
+                      layout
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.15 }}
+                      className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-5 py-3 text-slate-800 font-medium">
+                        {s.name || (
+                          <span className="text-slate-300 italic text-xs">
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                          {s.pin}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {s.branch || "—"}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {s.year || "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        {s.has_submitted ? (
+                          <span className="badge-green">✓ Submitted</span>
+                        ) : (
+                          <span className="badge-yellow">Pending</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {s.submitted_at
+                          ? parseSubmittedAt(s.submitted_at)?.toLocaleString(
+                              "en-IN",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              },
+                            )
+                          : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => setDeletePin(s.pin)}
+                          className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded transition-colors">
+                          Delete
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -2387,20 +1852,15 @@ function SettingsTab({
   const tooltipRef = useRef(null);
   const buttonRef = useRef(null);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [endTimeA, setEndTimeA] = useState("");
-  const [endTimeB, setEndTimeB] = useState("");
-  const [togglingA, setTogglingA] = useState(false);
-  const [togglingB, setTogglingB] = useState(false);
+  const [endTime, setEndTime] = useState("");
+  const [endTimeError, setEndTimeError] = useState("");
+  const [toggling, setToggling] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [importingA, setImportingA] = useState(false);
-  const [importingB, setImportingB] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [pendingImport, setPendingImport] = useState(null);
-  const [endTimeErrorA, setEndTimeErrorA] = useState("");
-  const [endTimeErrorB, setEndTimeErrorB] = useState("");
-  const isOpenA = stats?.config?.selection_open_a;
-  const isOpenB = stats?.config?.selection_open_b;
+  const selectionOpen = realtimeSelectionOpen ?? stats?.config?.selection_open;
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -2435,20 +1895,8 @@ function SettingsTab({
     "-" +
     String(today.getMinutes()).padStart(2, "0");
 
-  const savedEndTimeA = stats?.config?.end_time_a
-    ? stats.config.end_time_a.toDate().toLocaleString("en-IN", {
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : null;
-
-  const savedEndTimeB = stats?.config?.end_time_b
-    ? stats.config.end_time_b.toDate().toLocaleString("en-IN", {
+  const savedEndTime = stats?.config?.end_time
+    ? stats.config.end_time.toDate().toLocaleString("en-IN", {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         day: "2-digit",
         month: "short",
@@ -2461,85 +1909,42 @@ function SettingsTab({
 
   const minDateTime = new Date(Date.now() + 60000).toISOString().slice(0, 16);
 
-  const handleEndTimeChangeA = (val) => {
-    setEndTimeA(val);
+  const handleEndTimeChange = (val) => {
+    setEndTime(val);
     if (val) {
       const localDate = new Date(val);
       if (isNaN(localDate.getTime()) || localDate <= new Date()) {
-        setEndTimeErrorA("End time must be in the future");
+        setEndTimeError("End time must be in the future");
       } else {
-        setEndTimeErrorA("");
+        setEndTimeError("");
       }
     } else {
-      setEndTimeErrorA("");
+      setEndTimeError("");
     }
   };
 
-  const handleEndTimeChangeB = (val) => {
-    setEndTimeB(val);
-    if (val) {
-      const localDate = new Date(val);
-      if (isNaN(localDate.getTime()) || localDate <= new Date()) {
-        setEndTimeErrorB("End time must be in the future");
-      } else {
-        setEndTimeErrorB("");
-      }
-    } else {
-      setEndTimeErrorB("");
-    }
-  };
-
-  const handleToggleA = async () => {
-    if (endTimeErrorA) return toast.error("Fix the end time error first");
-    if (endTimeA) {
-      const selected = new Date(endTimeA);
+  const handleToggle = async () => {
+    if (endTimeError) return toast.error("Fix the end time error first");
+    if (endTime) {
+      const selected = new Date(endTime);
       if (isNaN(selected.getTime()) || selected <= new Date()) {
-        setEndTimeErrorA("End time must be in the future");
+        setEndTimeError("End time must be in the future");
         return toast.error("End time must be in the future");
       }
     }
-    setTogglingA(true);
+    setToggling(true);
     try {
-      const isoEndTime = endTimeA
-        ? new Date(endTimeA).toISOString()
-        : undefined;
-      await toggleSelection(!isOpenA, isoEndTime, "A");
+      const isoEndTime = endTime ? new Date(endTime).toISOString() : undefined;
+      await toggleSelection(!selectionOpen, isoEndTime);
       toast.success(
-        `Selection for Group A ${!isOpenA ? "opened" : "closed"} successfully.`,
+        `Selection ${!selectionOpen ? "opened" : "closed"} successfully.`,
       );
-      setEndTimeA("");
+      setEndTime("");
       onRefresh();
     } catch (err) {
       toast.error(err.error || "Failed to toggle");
     } finally {
-      setTogglingA(false);
-    }
-  };
-
-  const handleToggleB = async () => {
-    if (endTimeErrorB) return toast.error("Fix the end time error first");
-    if (endTimeB) {
-      const selected = new Date(endTimeB);
-      if (isNaN(selected.getTime()) || selected <= new Date()) {
-        setEndTimeErrorB("End time must be in the future");
-        return toast.error("End time must be in the future");
-      }
-    }
-    setTogglingB(true);
-    try {
-      const isoEndTime = endTimeB
-        ? new Date(endTimeB).toISOString()
-        : undefined;
-      await toggleSelection(!isOpenB, isoEndTime, "B");
-      toast.success(
-        `Selection for Group B ${!isOpenB ? "opened" : "closed"} successfully.`,
-      );
-      setEndTimeB("");
-      onRefresh();
-    } catch (err) {
-      toast.error(err.error || "Failed to toggle");
-    } finally {
-      setTogglingB(false);
+      setToggling(false);
     }
   };
 
@@ -2575,22 +1980,20 @@ function SettingsTab({
     }
   };
 
-  const handleImport = async (e, group) => {
+  const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const setImporting = group === "A" ? setImportingA : setImportingB;
     setImporting(true);
     setImportResult(null);
     setPendingImport(null);
     try {
-      const result = await importStudents(file, group);
+      const result = await importStudents(file);
       if ((result.duplicateCount ?? 0) > 0) {
-        // Hold result — show warning panel instead of success
-        setPendingImport({ ...result, group });
+        setPendingImport(result);
       } else {
         setImportResult(result);
         toast.success(
-          `Imported ${result.importedCount} students to Group ${group}!`,
+          `Imported ${result.importedCount} students successfully.`,
         );
         onRefresh();
       }
@@ -2610,35 +2013,35 @@ function SettingsTab({
     setImportResult(pendingImport);
     setPendingImport(null);
     toast.success(
-      `Imported ${pendingImport.importedCount} students to Group ${pendingImport.group}!`,
+      `Imported ${pendingImport.importedCount} students successfully.`,
     );
     onRefresh();
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Group A Selection Window */}
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 font-display mb-1">
-          Group A Selection Window
+          Selection Window
         </h3>
         <p className="text-sm text-slate-500 mb-4">
-          Control when Group A students can submit faculty selections.
+          Control when students can submit faculty selections.
         </p>
 
         <div className="flex items-center gap-3 mb-5">
           <div
-            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOpenA ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
+            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${selectionOpen ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
           />
           <span className="text-sm font-medium text-slate-700">
-            Group A selection is currently{" "}
-            <strong className={isOpenA ? "text-green-700" : "text-slate-600"}>
-              {isOpenA ? "OPEN" : "CLOSED"}
+            Selection is currently{" "}
+            <strong
+              className={selectionOpen ? "text-green-700" : "text-slate-600"}>
+              {selectionOpen ? "OPEN" : "CLOSED"}
             </strong>
           </span>
         </div>
 
-        {isOpenA && stats?.config?.end_time_a && (
+        {selectionOpen && stats?.config?.end_time && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2660,13 +2063,13 @@ function SettingsTab({
                 Scheduled to close at
               </p>
               <p className="text-sm text-amber-700 font-mono mt-0.5">
-                {savedEndTimeA}
+                {savedEndTime}
               </p>
             </div>
           </motion.div>
         )}
 
-        {isOpenA && !stats?.config?.end_time_a && (
+        {selectionOpen && !stats?.config?.end_time && (
           <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             <svg
               className="w-4 h-4 text-green-600 flex-shrink-0"
@@ -2689,18 +2092,18 @@ function SettingsTab({
         <div className="space-y-3">
           <div>
             <label className="label">
-              {isOpenA
+              {selectionOpen
                 ? "Update End Time (optional)"
                 : "Set End Time (optional)"}
             </label>
             <input
               type="datetime-local"
-              className={`input-field ${endTimeErrorA ? "border-red-400 focus:ring-red-400" : ""}`}
-              value={endTimeA}
+              className={`input-field ${endTimeError ? "border-red-400 focus:ring-red-400" : ""}`}
+              value={endTime}
               min={minDateTime}
-              onChange={(e) => handleEndTimeChangeA(e.target.value)}
+              onChange={(e) => handleEndTimeChange(e.target.value)}
             />
-            {endTimeErrorA && (
+            {endTimeError && (
               <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                 <svg
                   className="w-3.5 h-3.5"
@@ -2712,13 +2115,13 @@ function SettingsTab({
                     clipRule="evenodd"
                   />
                 </svg>
-                {endTimeErrorA}
+                {endTimeError}
               </p>
             )}
-            {endTimeA && !endTimeErrorA && (
+            {endTime && !endTimeError && (
               <p className="text-xs text-green-600 mt-1">
                 ✓ Will close on{" "}
-                {new Date(endTimeA).toLocaleString("en-IN", {
+                {new Date(endTime).toLocaleString("en-IN", {
                   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                   day: "2-digit",
                   month: "short",
@@ -2731,151 +2134,19 @@ function SettingsTab({
             )}
           </div>
           <button
-            onClick={handleToggleA}
-            disabled={togglingA || !!endTimeErrorA}
+            onClick={handleToggle}
+            disabled={toggling || !!endTimeError}
             className={`w-full px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-              isOpenA
+              selectionOpen
                 ? "bg-red-600 hover:bg-red-700 text-white"
                 : "bg-green-600 hover:bg-green-700 text-white"
             } disabled:opacity-50 disabled:cursor-not-allowed`}>
-            {togglingA ? (
+            {toggling ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isOpenA ? (
-              "Close Group A Selection"
+            ) : selectionOpen ? (
+              "Close Selection"
             ) : (
-              "Open Group A Selection"
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Group B Selection Window */}
-      <div className="card p-5">
-        <h3 className="font-semibold text-slate-900 font-display mb-1">
-          Group B Selection Window
-        </h3>
-        <p className="text-sm text-slate-500 mb-4">
-          Control when Group B students can submit faculty selections.
-        </p>
-
-        <div className="flex items-center gap-3 mb-5">
-          <div
-            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOpenB ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
-          />
-          <span className="text-sm font-medium text-slate-700">
-            Group B selection is currently{" "}
-            <strong className={isOpenB ? "text-green-700" : "text-slate-600"}>
-              {isOpenB ? "OPEN" : "CLOSED"}
-            </strong>
-          </span>
-        </div>
-
-        {isOpenB && stats?.config?.end_time_b && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            <svg
-              className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="text-sm font-medium text-amber-800">
-                Scheduled to close at
-              </p>
-              <p className="text-sm text-amber-700 font-mono mt-0.5">
-                {savedEndTimeB}
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {isOpenB && !stats?.config?.end_time_b && (
-          <div className="mb-4 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-            <svg
-              className="w-4 h-4 text-green-600 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-sm text-green-700">
-              Open with no end time — closes only when you manually close it.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div>
-            <label className="label">
-              {isOpenB
-                ? "Update End Time (optional)"
-                : "Set End Time (optional)"}
-            </label>
-            <input
-              type="datetime-local"
-              className={`input-field ${endTimeErrorB ? "border-red-400 focus:ring-red-400" : ""}`}
-              value={endTimeB}
-              min={minDateTime}
-              onChange={(e) => handleEndTimeChangeB(e.target.value)}
-            />
-            {endTimeErrorB && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                {endTimeErrorB}
-              </p>
-            )}
-            {endTimeB && !endTimeErrorB && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ Will close on{" "}
-                {new Date(endTimeB).toLocaleString("en-IN", {
-                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleToggleB}
-            disabled={togglingB || !!endTimeErrorB}
-            className={`w-full px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-              isOpenB
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-green-600 hover:bg-green-700 text-white"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}>
-            {togglingB ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isOpenB ? (
-              "Close Group B Selection"
-            ) : (
-              "Open Group B Selection"
+              "Open Selection"
             )}
           </button>
         </div>
@@ -2951,9 +2222,9 @@ function SettingsTab({
         </p>
         <div className="space-y-4">
           <div>
-            <label className="label font">Group A: </label>
+            <label className="label font">Upload Students</label>
             <label
-              className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingA ? "opacity-50 cursor-not-allowed" : ""}`}>
+              className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importing ? "opacity-50 cursor-not-allowed" : ""}`}>
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -2966,39 +2237,13 @@ function SettingsTab({
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              {importingA ? "Importing..." : "Upload Group A Excel File"}
+              {importing ? "Importing..." : "Upload Student Excel File"}
               <input
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
-                onChange={(e) => handleImport(e, "A")}
-                disabled={importingA}
-              />
-            </label>
-          </div>
-          <div>
-            <label className="label font">Group B: </label>
-            <label
-              className={`btn-secondary cursor-pointer flex items-center gap-2 w-fit ${importingB ? "opacity-50 cursor-not-allowed" : ""}`}>
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              {importingB ? "Importing..." : "Upload Group B Excel File"}
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(e) => handleImport(e, "B")}
-                disabled={importingB}
+                onChange={handleImport}
+                disabled={importing}
               />
             </label>
           </div>
@@ -3090,61 +2335,20 @@ function SettingsTab({
         <p className="text-sm text-slate-500 mb-4">
           Download faculty selections as CSV.
         </p>
-        {/* Group A Exports */}
         <div className="mb-6">
-          <h4 className="font-medium text-slate-800 mb-3">Group A Export</h4>
-          <div className="flex flex-col gap-3">
+          <h4 className="font-medium text-slate-800 mb-3">Student Export</h4>
+          {/* <div className="flex flex-col gap-3">
             <DownloadCSVButton
-              label="Student-wise CSV (Group A)"
+              label="Student-wise CSV"
               onClick={() =>
                 downloadBlob(
-                  exportStudentWiseGroupA(),
-                  `student_wise_group_a_${formatteddate}.csv`,
+                  exportStudentsCSV(),
+                  `student_wise_${formatteddate}.csv`,
                 )
               }
             />
-            <DownloadCSVButton
-              label="Faculty list CSV (Group A)"
-              onClick={() =>
-                downloadBlob(
-                  exportFacultyListGroupA(),
-                  `faculty_list_group_a_${formatteddate}.csv`,
-                )
-              }
-            />
-          </div>
-        </div>
-
-        {/* Group B Exports */}
-        <div className="mb-6">
-          <h4 className="font-medium text-slate-800 mb-3">Group B Export</h4>
-          <div className="flex flex-col gap-3">
-            <DownloadCSVButton
-              label="Student-wise CSV (Group B)"
-              onClick={() =>
-                downloadBlob(
-                  exportStudentWiseGroupB(),
-                  `student_wise_group_b_${formatteddate}.csv`,
-                )
-              }
-            />
-            <DownloadCSVButton
-              label="Faculty list CSV (Group B)"
-              onClick={() =>
-                downloadBlob(
-                  exportFacultyListGroupB(),
-                  `faculty_list_group_b_${formatteddate}.csv`,
-                )
-              }
-            />
-          </div>
-        </div>
-
-        {/* All Groups Exports */}
-        <div>
-          <h4 className="font-medium text-slate-800 mb-3">All Groups Export</h4>
-          <div className="flex flex-col gap-3">
-            <button
+          </div> */}
+          <button
               onClick={handleExport}
               disabled={isExporting}
               className="btn-secondary flex items-center gap-2 w-fit">
@@ -3167,14 +2371,37 @@ function SettingsTab({
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                  Export Student-wise CSV (All Groups)
+                  Export Student-wise CSV 
                 </>
               )}
             </button>
+        </div>
 
-            {/* Faculty-wise export — NEW */}
+        <div className="mb-6">
+          <h4 className="font-medium text-slate-800 mb-3">Faculty Export</h4>
+          {/* <div className="flex flex-col gap-3">
             <DownloadCSVButton
-              label="Export Faculty-wise CSV (All Groups)"
+              label="Faculty list CSV"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultyListCSV(),
+                  `faculty_list_${formatteddate}.csv`,
+                )
+              }
+            />
+            <DownloadCSVButton
+              label="Faculty selections with students CSV"
+              onClick={() =>
+                downloadBlob(
+                  exportFacultySelectionsWithStudentsCSV(),
+                  `faculty_selections_with_students_${formatteddate}.csv`,
+                )
+              }
+            />
+          </div> */}
+           {/* Faculty-wise export — NEW */}
+            <DownloadCSVButton
+              label="Export Faculty-wise CSV"
               onClick={() =>
                 downloadBlob(
                   exportFacultyCSV(),
@@ -3182,8 +2409,8 @@ function SettingsTab({
                 )
               }
             />
-          </div>
         </div>
+
       </div>
 
       <div className="card p-5 border-red-200">
@@ -3249,13 +2476,7 @@ export default function AdminDashboard() {
   const mergedStats = useMemo(() => {
     if (!stats) return null;
 
-    // 1. Consolidate initial faculty from both groups in the fetched stats
-    const initialFaculty = [
-      ...(stats.groupA?.faculty || []),
-      ...(stats.groupB?.faculty || []),
-    ];
-
-    // 2. Merge initial faculty with real-time faculty updates
+    const initialFaculty = stats.overall?.faculty || [];
     const finalFaculty =
       realtimeFaculty.length > 0
         ? realtimeFaculty.map((realtimeF) => {
@@ -3266,64 +2487,38 @@ export default function AdminDashboard() {
                 statsF?.current_count ?? realtimeF.current_count ?? 0,
             };
           })
-        : initialFaculty; // If no real-time faculty, use the initial fetched faculty
+        : initialFaculty;
 
-    // 3. Determine the final list of subjects (from real-time or initial fetch)
     const finalSubjects =
       realtimeSubjects.length > 0 ? realtimeSubjects : stats.subjects || [];
 
-    // 4. Filter faculty by group based on the finalFaculty list
-    const groupAFaculty = finalFaculty.filter((f) => f.group === "A");
-    const groupBFaculty = finalFaculty.filter((f) => f.group === "B");
-
-    // 5. Re-calculate subject breakdown for each group using the filtered faculty
-    const subjectBreakdownA = finalSubjects.map((sub) => {
-      const subFaculty = groupAFaculty.filter((f) => f.subject_id === sub.id);
-      return {
-        subject: sub,
-        faculty: subFaculty,
-        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
-        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
-      };
-    });
-
-    const subjectBreakdownB = finalSubjects.map((sub) => {
-      const subFaculty = groupBFaculty.filter((f) => f.subject_id === sub.id);
-      return {
-        subject: sub,
-        faculty: subFaculty,
-        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
-        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
-      };
-    });
-
-    // 6. Calculate overall subject breakdown using the finalFaculty list
-    const overallSubjectBreakdown = finalSubjects.map((sub) => {
+    const subjectBreakdown = finalSubjects.map((sub) => {
       const subFaculty = finalFaculty.filter((f) => f.subject_id === sub.id);
       return {
         subject: sub,
         faculty: subFaculty,
-        totalSeats: subFaculty.reduce((a, f) => a + (f.max_limit || 0), 0),
-        filledSeats: subFaculty.reduce((a, f) => a + (f.current_count || 0), 0),
+        totalSeats: subFaculty.reduce(
+          (a, f) => a + (Number(f.max_limit) || 0),
+          0,
+        ),
+        filledSeats: subFaculty.reduce(
+          (a, f) => a + (Number(f.current_count) || 0),
+          0,
+        ),
       };
     });
 
     return {
-      ...stats, // Spread original stats to retain other properties (totalStudents, submittedStudents, etc.)
-      faculty: finalFaculty, // Provide a consolidated faculty array for other tabs
+      ...stats,
+      faculty: finalFaculty,
       subjects: finalSubjects,
+      overall: {
+        ...stats.overall,
+        faculty: finalFaculty,
+        subjectBreakdown,
+        recentSelections: stats.overall?.recentSelections || [],
+      },
       config: realtimeConfig ?? stats.config,
-      groupA: {
-        ...stats.groupA,
-        faculty: groupAFaculty,
-        subjectBreakdown: subjectBreakdownA,
-      },
-      groupB: {
-        ...stats.groupB,
-        faculty: groupBFaculty,
-        subjectBreakdown: subjectBreakdownB,
-      },
-      subjectBreakdown: overallSubjectBreakdown, // Use the overall breakdown
     };
   }, [stats, realtimeFaculty, realtimeSubjects, realtimeConfig]);
 
@@ -3417,13 +2612,7 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-2.5 flex-shrink-0">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl ">
-                <img
-                  src="/logo.png"
-                  alt="clg logo"
-                  style={{ borderRadius: 10 }}
-                />
-              </div>
+              
               <div className="hidden sm:block">
                 <p className="font-semibold text-slate-900 font-display text-sm leading-tight">
                   Admin Portal

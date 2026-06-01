@@ -31,7 +31,7 @@ function parseDob(raw) {
   return null;
 }
 
-async function processBuffer(buffer, group) {
+async function processBuffer(buffer) {
   const XLSX = require("xlsx");
   const workbook = XLSX.read(buffer, {
     type: "buffer",
@@ -141,7 +141,6 @@ async function processBuffer(buffer, group) {
         branch: rawPin.substring(5, 8),
         year: "20" + rawPin.substring(0, 2),
         name: studentName,
-        group: group,
         has_submitted: false,
       },
       { merge: true },
@@ -176,19 +175,10 @@ async function processBuffer(buffer, group) {
 exports.importStudents = (req, res) => {
   console.log("=== importStudents ===");
   console.log("content-type:", req.headers["content-type"]);
-  console.log("group from body:", req.body?.group);
-
-  const group = req.body?.group;
-  if (!group || (group !== "A" && group !== "B")) {
-    return res.status(400).json({
-      error: "Group must be A or B",
-      code: "INVALID_REQUEST",
-    });
-  }
 
   if (req.file) {
     console.log("Using req.file, size:", req.file.size);
-    processBuffer(req.file.buffer, group)
+    processBuffer(req.file.buffer)
       .then(({ importedCount, skippedCount, errors, duplicateCount }) => {
         res.status(200).json({
           success: true,
@@ -233,7 +223,7 @@ exports.importStudents = (req, res) => {
 
       try {
         const buffer = Buffer.concat(chunks);
-        const result = await processBuffer(buffer, group);
+        const result = await processBuffer(buffer);
         return res.status(200).json({
           success: true,
           ...result,

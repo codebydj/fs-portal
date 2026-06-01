@@ -23,13 +23,7 @@ export default function StudentNavbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl ">
-              <img
-                src="/logo.png"
-                alt="clg logo"
-                style={{ borderRadius: 10 }}
-              />
-            </div>
+         
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 font-display leading-tight">
               Faculty Portal

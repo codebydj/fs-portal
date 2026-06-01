@@ -100,10 +100,10 @@ export const deleteFaculty = (id) =>
   request(`/admin/faculty/${id}`, { method: "DELETE" });
 
 // ── Admin — Settings & Resets ─────────────────────────────────
-export const toggleSelection = (selection_open, end_time, group) =>
+export const toggleSelection = (selection_open, end_time) =>
   request("/admin/toggle-selection", {
     method: "POST",
-    body: JSON.stringify({ selection_open, end_time, group }),
+    body: JSON.stringify({ selection_open, end_time }),
   });
 export const resetSelections = () =>
   request("/admin/reset-selections", { method: "POST" });
@@ -154,61 +154,17 @@ export const exportFacultySelectionsWithStudentsCSV = () => {
 };
 
 // Admin - Reset Faculty by Group
-export const resetFacultyByGroup = (group) =>
-  request("/admin/reset-faculty-by-group", {
-    method: "POST",
-    body: JSON.stringify({ group }),
-  });
-
-export const exportStudentWiseGroupA = () => {
+export const exportFacultyListCSV = () => {
   const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-student-wise-group-a`, {
+  return fetch(`${BASE_URL}/admin/export-faculty-list-csv`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then((res) => res.blob());
 };
 
-export const exportStudentWiseGroupB = () => {
-  const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-student-wise-group-b`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.blob());
-};
-
-export const exportFacultyWiseGroupA = () => {
-  const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-faculty-wise-group-a`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.blob());
-};
-
-export const exportFacultyWiseGroupB = () => {
-  const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-faculty-wise-group-b`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.blob());
-};
-
-// New: Export faculty list for Group A (Name, Subject, Max Seats, Seats Filled)
-export const exportFacultyListGroupA = () => {
-  const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-faculty-list-group-a`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.blob());
-};
-
-// New: Export faculty list for Group B (Name, Subject, Max Seats, Seats Filled)
-export const exportFacultyListGroupB = () => {
-  const token = getToken();
-  return fetch(`${BASE_URL}/admin/export-faculty-list-group-b`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.blob());
-};
-
-export const importStudents = (file, group) => {
+export const importStudents = (file) => {
   const token = getToken();
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("group", group);
   return fetch(`${BASE_URL}/admin/import-students`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },

@@ -70,7 +70,6 @@ const {
   resetAllFaculty,
   resetStudents,
   getStats,
-  resetFacultyByGroup,
   getStudents,
   deleteStudent,
   getFacultyStudents,
@@ -82,10 +81,7 @@ const {
   exportFacultyCSV,
   exportStudentsCSV,
   exportFacultySelectionsWithStudentsCSV,
-  exportFacultyListGroupA, // New export for faculty list
-  exportFacultyListGroupB, // New export for faculty list
-  exportFacultyWiseGroupA, // Group A faculty-wise export
-  exportFacultyWiseGroupB, // Group B faculty-wise export
+  exportFacultyListCSV, // Keep this one
 } = require("./controllers/exportController");
 const { verifyAdmin } = require("./middlewares/adminAuth");
 const { verifyStudent } = require("./middlewares/studentAuth");
@@ -114,7 +110,7 @@ app.post("/admin/reset-selections", verifyAdmin, resetSelections);
 app.post("/admin/reset-subjects", verifyAdmin, resetAllSubjects);
 app.post("/admin/reset-faculty", verifyAdmin, resetAllFaculty);
 app.post("/admin/reset-students", verifyAdmin, resetStudents);
-app.post("/admin/reset-faculty-by-group", verifyAdmin, resetFacultyByGroup);
+// Group-specific reset route removed — use /admin/reset-faculty instead
 
 // Admin — Students view
 app.get("/admin/students", verifyAdmin, getStudents);
@@ -124,33 +120,19 @@ app.get("/admin/faculty/:facultyId/students", verifyAdmin, getFacultyStudents);
 // Admin — Import & Export
 app.post("/admin/import-students", verifyAdmin, importStudents);
 app.get("/admin/export-csv", verifyAdmin, exportCSV);
-app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
-app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
-app.get(
-  "/admin/export-faculty-wise-group-a",
-  verifyAdmin,
-  exportFacultyWiseGroupA,
-);
-app.get(
-  "/admin/export-faculty-wise-group-b",
-  verifyAdmin,
-  exportFacultyWiseGroupB,
-);
-app.get(
-  "/admin/export-faculty-list-group-a",
-  verifyAdmin,
-  exportFacultyListGroupA,
-); // New route
-app.get(
-  "/admin/export-faculty-list-group-b",
-  verifyAdmin,
-  exportFacultyListGroupB,
-); // New route
+// Group-specific export routes removed — use unified export endpoints:
+// - /admin/export-faculty-csv
+// - /admin/export-faculty-selections-with-students-csv
+// - /admin/export-students-csv
 app.get(
   "/admin/export-faculty-selections-with-students-csv",
   verifyAdmin,
   exportFacultySelectionsWithStudentsCSV,
 );
+app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
+app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
+// Unified faculty list export
+app.get("/admin/export-faculty-list-csv", verifyAdmin, exportFacultyListCSV);
 
 exports.api = functions.https.onRequest(app);

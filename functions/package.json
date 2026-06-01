@@ -2,7 +2,7 @@
   "name": "faculty-portal-server",
   "version": "1.0.0",
   "description": "Faculty Selection Portal — Backend API",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "start": "node server.js",
     "serve": "firebase emulators:start --only functions"

@@ -98,7 +98,6 @@ exports.studentLogin = async (req, res) => {
         name: student.name || "",
         branch: student.branch || parsed.branch,
         year: student.year || parsed.year,
-        group: student.group || "A",
         has_submitted: student.has_submitted || false,
       },
       has_submitted: student.has_submitted || false,

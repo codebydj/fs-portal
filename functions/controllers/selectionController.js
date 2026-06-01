@@ -9,9 +9,10 @@ function normalizeFacultyData(data) {
   const totalSeats = Number(data.totalSeats ?? data.max_limit ?? 0);
   const enrolled = Number(data.enrolled ?? data.current_count ?? 0);
   const reservedSeats = Number(data.reservedSeats ?? 0);
-  const availableSeats = data.availableSeats != null
-    ? Number(data.availableSeats)
-    : Math.max(0, totalSeats - enrolled - reservedSeats);
+  const availableSeats =
+    data.availableSeats != null
+      ? Number(data.availableSeats)
+      : Math.max(0, totalSeats - enrolled - reservedSeats);
 
   return {
     ...data,
@@ -33,9 +34,10 @@ exports.reserveSelection = async (req, res) => {
   const { subjectId, facultyId } = req.body;
 
   if (!subjectId || !facultyId) {
-    return res
-      .status(400)
-      .json({ error: "subjectId and facultyId are required", code: "INVALID_REQUEST" });
+    return res.status(400).json({
+      error: "subjectId and facultyId are required",
+      code: "INVALID_REQUEST",
+    });
   }
 
   try {
@@ -59,7 +61,9 @@ exports.reserveSelection = async (req, res) => {
         .where("pin", "==", pin)
         .where("subjectId", "==", subjectId)
         .where("active", "==", true);
-      const existingReservationSnap = await transaction.get(existingReservationQuery);
+      const existingReservationSnap = await transaction.get(
+        existingReservationQuery,
+      );
 
       if (!existingReservationSnap.empty) {
         const existing = existingReservationSnap.docs[0].data();
@@ -84,7 +88,10 @@ exports.reserveSelection = async (req, res) => {
       }
 
       if (faculty.availableSeats <= 0) {
-        throw createPortalError("SEATS_FULL", "No seats available for this faculty.");
+        throw createPortalError(
+          "SEATS_FULL",
+          "No seats available for this faculty.",
+        );
       }
 
       const reservationRef = db.collection("reservations").doc();
@@ -110,14 +117,20 @@ exports.reserveSelection = async (req, res) => {
       });
     });
 
-    return res.status(200).json({ success: true, message: "Reservation created" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Reservation created" });
   } catch (err) {
     console.error("Reserve selection error:", err);
     if (err.portalCode === "ALREADY_SUBMITTED") {
-      return res.status(409).json({ error: err.message, code: "ALREADY_SUBMITTED" });
+      return res
+        .status(409)
+        .json({ error: err.message, code: "ALREADY_SUBMITTED" });
     }
     if (err.portalCode === "ALREADY_RESERVED") {
-      return res.status(409).json({ error: err.message, code: "ALREADY_RESERVED" });
+      return res
+        .status(409)
+        .json({ error: err.message, code: "ALREADY_RESERVED" });
     }
     if (err.portalCode === "SEATS_FULL") {
       return res.status(409).json({ error: err.message, code: "SEATS_FULL" });
@@ -126,9 +139,13 @@ exports.reserveSelection = async (req, res) => {
       return res.status(404).json({ error: err.message, code: "NOT_FOUND" });
     }
     if (err.portalCode === "INVALID_REQUEST") {
-      return res.status(400).json({ error: err.message, code: "INVALID_REQUEST" });
+      return res
+        .status(400)
+        .json({ error: err.message, code: "INVALID_REQUEST" });
     }
-    return res.status(500).json({ error: "Internal server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Internal server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -137,9 +154,10 @@ exports.releaseReservation = async (req, res) => {
   const { subjectId, facultyId } = req.body;
 
   if (!subjectId || !facultyId) {
-    return res
-      .status(400)
-      .json({ error: "subjectId and facultyId are required", code: "INVALID_REQUEST" });
+    return res.status(400).json({
+      error: "subjectId and facultyId are required",
+      code: "INVALID_REQUEST",
+    });
   }
 
   try {
@@ -181,13 +199,17 @@ exports.releaseReservation = async (req, res) => {
       transaction.update(reservationDoc.ref, { active: false });
     });
 
-    return res.status(200).json({ success: true, message: "Reservation released" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Reservation released" });
   } catch (err) {
     console.error("Release reservation error:", err);
     if (err.portalCode === "NOT_FOUND") {
       return res.status(404).json({ error: err.message, code: "NOT_FOUND" });
     }
-    return res.status(500).json({ error: "Internal server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Internal server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -248,10 +270,14 @@ exports.releaseAllReservations = async (req, res) => {
       }
     });
 
-    return res.status(200).json({ success: true, message: "All reservations released" });
+    return res
+      .status(200)
+      .json({ success: true, message: "All reservations released" });
   } catch (err) {
     console.error("Release all reservations error:", err);
-    return res.status(500).json({ error: "Internal server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Internal server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -265,11 +291,16 @@ exports.getActiveReservations = async (req, res) => {
       .where("active", "==", true)
       .get();
 
-    const reservations = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const reservations = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
     return res.status(200).json({ success: true, reservations });
   } catch (err) {
     console.error("Get active reservations error:", err);
-    return res.status(500).json({ error: "Internal server error", code: "SERVER_ERROR" });
+    return res
+      .status(500)
+      .json({ error: "Internal server error", code: "SERVER_ERROR" });
   }
 };
 
@@ -302,24 +333,17 @@ exports.submitSelection = async (req, res) => {
         .json({ error: "Student not found", code: "NOT_FOUND" });
     }
 
-    const studentGroupRaw = studentSnap.data().group || "A";
-    const studentGroup = String(studentGroupRaw).trim().toUpperCase();
-    const groupKey = studentGroup === "B" ? "b" : "a";
+    const selectionOpen = config.selection_open === true;
+    const selectionEndTime = config.end_time || null;
 
-    const groupOpenKey = `selection_open_${groupKey}`;
-    const groupEndTimeKey = `end_time_${groupKey}`;
-
-    const groupSelectionOpen = config[groupOpenKey] === true;
-    const groupEndTime = config[groupEndTimeKey] || null;
-
-    if (!groupSelectionOpen) {
+    if (!selectionOpen) {
       return res.status(403).json({
         error: "Faculty selection is currently closed",
         code: "SELECTION_CLOSED",
       });
     }
 
-    if (groupEndTime && groupEndTime.toMillis() < now.toMillis()) {
+    if (selectionEndTime && selectionEndTime.toMillis() < now.toMillis()) {
       return res.status(403).json({
         error: "Faculty selection window has expired",
         code: "SELECTION_CLOSED",
@@ -435,7 +459,10 @@ exports.submitSelection = async (req, res) => {
 
         const faculty = normalizeFacultyData(facultySnap.data());
         if (faculty.subject_id !== sel.subject_id) {
-          throw createPortalError("INVALID_REQUEST", "Faculty-subject mismatch");
+          throw createPortalError(
+            "INVALID_REQUEST",
+            "Faculty-subject mismatch",
+          );
         }
 
         const newEnrolled = faculty.enrolled + 1;
@@ -504,7 +531,9 @@ async function cleanupExpiredReservations() {
 
     for (const reservationDoc of expiredSnap.docs) {
       const reservationData = reservationDoc.data();
-      const facultyRef = db.collection("faculty").doc(reservationData.facultyId);
+      const facultyRef = db
+        .collection("faculty")
+        .doc(reservationData.facultyId);
 
       await db.runTransaction(async (transaction) => {
         const facultySnap = await transaction.get(facultyRef);

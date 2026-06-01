@@ -249,22 +249,8 @@ const AlreadySubmittedModal = ({
             <p className="text-lg font-sans font-bold text-slate-500 mt-2.5">
               {user?.name} ({user?.pin})
             </p>
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="currentColor"
-                viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Group: {user?.group || "A"}
-            </span>
-            <p className="text-slate-500 text-sm mt-3">
-              Submitted on {submissionTime}
-            </p>
+            {/* Group removed from UI */}
+                <p className="text-slate-500 text-sm mt-3">Submitted on {submissionTime}</p>
           </div>
 
           <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
@@ -297,9 +283,7 @@ const AlreadySubmittedModal = ({
 
 export default function StudentDashboard() {
   const { user, updateUser } = useAuth();
-  const { selectionOpen, expired, configLoaded } = useCountdown(
-    user?.group || "A",
-  );
+  const { selectionOpen, expired, configLoaded } = useCountdown();
 
   const [subjects, setSubjects] = useState([]);
   const [selections, setSelections] = useState({});
@@ -628,19 +612,6 @@ export default function StudentDashboard() {
               <span className="text-slate-300">·</span>
               <span className="text-sm text-slate-500">{user?.year}</span>
               <span className="text-slate-300">·</span>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Group: {user?.group || "A"}
-              </span>
             </div>
           </div>
 
@@ -836,7 +807,6 @@ export default function StudentDashboard() {
                   reservationLoading ||
                   submitting
                 }
-                userGroup={user?.group || "A"}
               />
             </motion.div>
           ))}

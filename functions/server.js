@@ -5,8 +5,15 @@ const multer = require("multer");
 require("dotenv").config();
 
 // ── Firebase Admin init ───────────────────────────────────────
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : null;
+
+if (serviceAccount) {
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+} else {
+  admin.initializeApp();
+}
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -79,13 +86,10 @@ const {
   exportSubjectsCSV,
   exportFacultyCSV,
   exportStudentsCSV,
-  exportStudentWiseGroupA,
-  exportStudentWiseGroupB,
-  exportFacultyWiseGroupA,
-  exportFacultyWiseGroupB,
+  exportFacultySelectionsWithStudentsCSV,
+  exportFacultyListCSV,
 } = require("./controllers/exportController");
 const { verifyStudent } = require("./middlewares/studentAuth");
-
 app.post("/auth/student/login", studentLogin);
 app.post("/auth/admin/login", adminLogin);
 app.post("/selection/reserve", verifyStudent, reserveSelection);
@@ -113,41 +117,17 @@ app.get("/admin/export-csv", verifyAdmin, exportCSV);
 app.get("/admin/export-subjects-csv", verifyAdmin, exportSubjectsCSV);
 app.get("/admin/export-faculty-csv", verifyAdmin, exportFacultyCSV);
 app.get("/admin/export-students-csv", verifyAdmin, exportStudentsCSV);
-app.get(
-  "/admin/export-student-wise-group-a",
-  verifyAdmin,
-  exportStudentWiseGroupA,
-);
-app.get(
-  "/admin/export-student-wise-group-b",
-  verifyAdmin,
-  exportStudentWiseGroupB,
-);
-app.get(
-  "/admin/export-faculty-wise-group-a",
-  verifyAdmin,
-  exportFacultyWiseGroupA,
-);
-app.get(
-  "/admin/export-faculty-wise-group-b",
-  verifyAdmin,
-  exportFacultyWiseGroupB,
-);
-app.get(
-  "/admin/export-faculty-list-group-a",
-  verifyAdmin,
-  require("./controllers/exportController").exportFacultyListGroupA,
-);
-app.get(
-  "/admin/export-faculty-list-group-b",
-  verifyAdmin,
-  require("./controllers/exportController").exportFacultyListGroupB,
-);
+app.get("/admin/export-faculty-list-csv", verifyAdmin, exportFacultyListCSV);
 
 const PORT = process.env.PORT || 8080;
-startReservationCleanup();
-app.listen(PORT, () =>
-  console.log(`✅ Faculty Portal API running on port ${PORT}`),
-);
+
+if (require.main === module) {
+  startReservationCleanup();
+  app.listen(PORT, () =>
+    console.log(`✅ Faculty Portal API running on port ${PORT}`),
+  );
+}
+
+module.exports = app;
 
 //server.js

@@ -48,13 +48,7 @@ export default function AdminLogin() {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl ">
-              <img
-                src="/logo.png"
-                alt="clg logo"
-                style={{ borderRadius: 10 }}
-              />
-            </div>
+           
             <h1 className="text-2xl font-bold text-white font-display">
               Admin Portal
             </h1>
