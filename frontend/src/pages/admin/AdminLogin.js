@@ -35,7 +35,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-primary-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-600 to-primary-900">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-600 rounded-full opacity-10 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-slate-600 rounded-full opacity-20 blur-3xl" />
@@ -48,8 +48,8 @@ export default function AdminLogin() {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="w-full max-w-md">
           <div className="text-center mb-8">
-           
-            <h1 className="text-2xl font-bold text-white font-display">
+            <h1 className="text-2xl font-bold text-white font-display ">
+              <img src="/logo.png" alt="Logo" className="mx-auto mb-3 w-20" />
               Admin Portal
             </h1>
             <p className="text-slate-400 text-sm mt-1">
@@ -171,8 +171,8 @@ export default function AdminLogin() {
                   </>
                 )}
               </button>
-              <p className="text-center text-sm text-slate-400" mt-2>
-                last updated: 16-05-2026
+              <p className="text-center text-sm text-slate-400 mt-2">
+                last updated: 02-06-2026
               </p>
             </form>
           </div>

@@ -250,7 +250,9 @@ const AlreadySubmittedModal = ({
               {user?.name} ({user?.pin})
             </p>
             {/* Group removed from UI */}
-                <p className="text-slate-500 text-sm mt-3">Submitted on {submissionTime}</p>
+            <p className="text-slate-500 text-sm mt-3">
+              Submitted on {submissionTime}
+            </p>
           </div>
 
           <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
@@ -577,7 +579,7 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="min-h-screen flex flex-col dashboard-bg">
         <StudentNavbar />
         <div className="flex-grow flex items-center justify-center h-96">
           <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full spinner" />
@@ -588,7 +590,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col dashboard-bg">
       <StudentNavbar />
 
       <main className="flex-grow w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">

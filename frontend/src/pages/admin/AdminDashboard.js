@@ -303,6 +303,7 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
 }
 
 // ── Seat Bar ──────────────────────────────────────────────────
+
 // function SeatBar({ faculty, subjects = [], onView }) {
 //   const pct =
 //     faculty.max_limit > 0
@@ -353,6 +354,7 @@ function FacultyStudentsModal({ faculty, subject, onClose }) {
 // }
 
 // ── Dashboard Tab ─────────────────────────────────────────────
+
 function DashboardTab({ stats, error }) {
   const [viewFaculty, setViewFaculty] = useState(null);
   const [loading, setLoading] = useState(!stats);
@@ -2349,32 +2351,32 @@ function SettingsTab({
             />
           </div> */}
           <button
-              onClick={handleExport}
-              disabled={isExporting}
-              className="btn-secondary flex items-center gap-2 w-fit">
-              {isExporting ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  Export Student-wise CSV 
-                </>
-              )}
-            </button>
+            onClick={handleExport}
+            disabled={isExporting}
+            className="btn-secondary flex items-center gap-2 w-fit">
+            {isExporting ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Export Student-wise CSV
+              </>
+            )}
+          </button>
         </div>
 
         <div className="mb-6">
@@ -2399,18 +2401,17 @@ function SettingsTab({
               }
             />
           </div> */}
-           {/* Faculty-wise export — NEW */}
-            <DownloadCSVButton
-              label="Export Faculty-wise CSV"
-              onClick={() =>
-                downloadBlob(
-                  exportFacultyCSV(),
-                  `faculty_wise${formatteddate}.csv`,
-                )
-              }
-            />
+          {/* Faculty-wise export — NEW */}
+          <DownloadCSVButton
+            label="Export Faculty-wise CSV"
+            onClick={() =>
+              downloadBlob(
+                exportFacultyCSV(),
+                `faculty_wise${formatteddate}.csv`,
+              )
+            }
+          />
         </div>
-
       </div>
 
       <div className="card p-5 border-red-200">
@@ -2607,12 +2608,14 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col dashboard-bg">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-2.5 flex-shrink-0">
-              
+              <div className="w-12">
+                <img src="logo.png" alt="Logo" srcset="" />
+              </div>
               <div className="hidden sm:block">
                 <p className="font-semibold text-slate-900 font-display text-sm leading-tight">
                   Admin Portal

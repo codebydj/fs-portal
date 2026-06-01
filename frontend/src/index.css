@@ -1,17 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
   body {
     margin: 0;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: "DM Sans", system-ui, sans-serif;
     background-color: #f8fafc;
     color: #1e293b;
   }
+}
+
+.dashboard-bg {
+  background: radial-gradient(circle, #c2e3fd 0%, #ffffff 100%);
 }
 
 @layer components {
@@ -48,16 +56,30 @@
 }
 
 /* Seat fill bar colors */
-.seat-bar-green { background-color: #16a34a; }
-.seat-bar-yellow { background-color: #ca8a04; }
-.seat-bar-red { background-color: #dc2626; }
+.seat-bar-green {
+  background-color: #16a34a;
+}
+.seat-bar-yellow {
+  background-color: #ca8a04;
+}
+.seat-bar-red {
+  background-color: #dc2626;
+}
 
 /* Smooth accordion */
 .accordion-content {
   overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease;
 }
 
 /* Spinner */
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinner { animation: spin 0.75s linear infinite; }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  animation: spin 0.75s linear infinite;
+}

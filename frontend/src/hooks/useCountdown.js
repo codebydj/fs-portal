@@ -36,6 +36,7 @@ export function useCountdown() {
   useEffect(() => {
     if (!endTime) {
       setTimeLeft(null);
+      setExpired(false);
       return;
     }
 

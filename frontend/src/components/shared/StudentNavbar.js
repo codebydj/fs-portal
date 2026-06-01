@@ -23,7 +23,7 @@ export default function StudentNavbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-3 flex-shrink-0">
-         
+                  <img src="/logo.png" alt="Logo" className="mx-auto mb-3 w-12" />
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 font-display leading-tight">
               Faculty Portal
